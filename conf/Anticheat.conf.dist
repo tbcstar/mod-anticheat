@@ -6,52 +6,52 @@
 #   ANTICHEAT MODULE
 #
 #     Anticheat.Enable
-#       Description: Enables or disables the Anticheat System functionality
+#       说明:启用或禁用防作弊系统功能
 #       Default:     1 - (Enabled)
 #                    0 - (Disabled)
 
 Anticheat.Enabled = 1
 
 #     Anticheat.EnabledOnGmAccounts
-#       Description: Enables detection for GM accounts
+#       说明:开启对GM帐号的检测
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 
 Anticheat.EnabledOnGmAccounts = 0
 
 #     Anticheat.ReportsForIngameWarnings
-#       Description: How many reports the player must have to notify to GameMasters ingame when he generates a new report.
+#       说明：玩家在生成新报告时必须通知GameMasters游戏中的报告数量
 #       Default:     70
 
 Anticheat.ReportsForIngameWarnings = 70
 
 #     Anticheat.MaxReportsForDailyReport
-#       Description: How many reports must the player have to make a report that it is in DB for a day (not only during the player's session).
+#       说明：玩家每天必须报告多少份报告（不只是在玩家会话期间）在数据库中
 #       Default:     70
 
 Anticheat.MaxReportsForDailyReport = 70
 
 #     Anticheat.LoginMessage
-#       Description: Enable login message "This server is running an Anticheat module."
+#       说明：启用登录消息“此服务器正在运行防作弊模块。”
 #       Default: 1 
 
 Anticheat.LoginMessage = 0
 
 #     Anticheat.WriteLog
-#       Description: Enable writing to log when a player is detected using hacks
+#       说明:当发现玩家使用黑客手段时，启用写入日志功能
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 
 Anticheat.WriteLog = 0
 
 #     Anticheat.SaveReportsTime
-#       Description: Set the time between each report save in seconds
+#       描述:设置每个报告保存之间的时间，单位为秒
 #       Default:    60 - (seconds)
 
 Anticheat.SaveReportsTime = 60
 
 #     Anticheat.Detect
-#       Description: It represents which detections are enabled (ClimbHack disabled by default).
+#       说明：它表示启用了哪些检测（默认情况下禁用ClimbHack）
 #       Default:    1 - (Enabled)
 #                   0 - (Disabled)
 
@@ -60,7 +60,7 @@ Anticheat.DetectWaterWalkHack = 1
 Anticheat.DetectJumpHack = 1
 Anticheat.DetectTelePlaneHack = 1
 Anticheat.DetectSpeedHack = 1
-Anticheat.DetectClimbHack = 0
+Anticheat.DetectClimbHack = 1
 
 #     Anticheat.StricterFlyHackCheck
 #       Description: Checks moveflag ascending (may give false positives)
@@ -70,21 +70,21 @@ Anticheat.DetectClimbHack = 0
 Anticheat.StricterFlyHackCheck = 0
 
 #     Anticheat.KickPlayerFlyHack
-#       Description: Kick option for first detect on flyhack (may give false positives)
+#       说明：首次检测flyhack的踢选项（可能会产生误报）
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 
 Anticheat.KickPlayerFlyHack = 0
 
 #     Anticheat.KickPlayerWaterWalkHack
-#       Description: Kick option for first detect on waterwalkhack (may give false positives)
+#       说明：首次检测到waterwalkhack的踢选项（可能会带来误报）
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 
 Anticheat.KickPlayerWaterWalkHack = 0
 
 #     Anticheat.AnnounceKick
-#       Description: Send a message to all players when a user kicked.
+#       说明：当用户被踢时向所有玩家发送消息
 #       Default:    0 - (Disabled)
 #     
 Anticheat.AnnounceKick = 1

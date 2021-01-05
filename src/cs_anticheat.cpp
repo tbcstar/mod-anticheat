@@ -70,7 +70,7 @@ public:
         WorldPacket data;
 
         // need copy to prevent corruption by strtok call in LineFromMessage original string
-        char* buf = strdup("The anticheat system has reported several times that you may be cheating. You will be monitored to confirm if this is accurate.");
+        char* buf = strdup("反作弊系统已经多次报告你可能在作弊。我们会监视你以确认这是否准确。");
         char* pos = buf;
 
         while (char* line = handler->LineFromMessage(pos))
@@ -153,7 +153,7 @@ public:
             normalizePlayerName(strCommand);
             Player* player = ObjectAccessor::FindPlayerByName(strCommand.c_str()); // get player by name
             if (!player)
-                handler->PSendSysMessage("Player doesn't exist");
+                handler->PSendSysMessage("玩家不存在");
             else
                 sAnticheatMgr->AnticheatDeleteCommand(player->GetGUIDLow());
         }
@@ -191,7 +191,7 @@ public:
 
         if (!guid)
         {
-            handler->PSendSysMessage("There is no player.");
+            handler->PSendSysMessage("没有玩家。");
             return true;
         }
 
@@ -204,11 +204,11 @@ public:
         uint32 teleportplane_reports = sAnticheatMgr->GetTypeReports(guid,4);
         uint32 climb_reports = sAnticheatMgr->GetTypeReports(guid,5);
 
-        handler->PSendSysMessage("Information about player %s",player->GetName().c_str());
-        handler->PSendSysMessage("Average: %f || Total Reports: %u ",average,total_reports);
-        handler->PSendSysMessage("Speed Reports: %u || Fly Reports: %u || Jump Reports: %u ",speed_reports,fly_reports,jump_reports);
-        handler->PSendSysMessage("Walk On Water Reports: %u  || Teleport To Plane Reports: %u",waterwalk_reports,teleportplane_reports);
-        handler->PSendSysMessage("Climb Reports: %u", climb_reports);
+        handler->PSendSysMessage("关于玩家 %s 的信息",player->GetName().c_str());
+        handler->PSendSysMessage("平均: %f || 总计: %u ",average,total_reports);
+        handler->PSendSysMessage("加速报告: %u || 飞行报告: %u || 穿墙报告: %u ",speed_reports,fly_reports,jump_reports);
+        handler->PSendSysMessage("水上行走报告: %u  || 传送报告: %u",waterwalk_reports,teleportplane_reports);
+        handler->PSendSysMessage("爬升报告: %u", climb_reports);
 
         return true;
     }
@@ -217,7 +217,7 @@ public:
     {
 		if (!sConfigMgr->GetBoolDefault("Anticheat.Enabled", 0))
         {
-            handler->PSendSysMessage("The Anticheat System is disabled.");
+            handler->PSendSysMessage("禁用防作弊系统。");
             return true;
         }
 

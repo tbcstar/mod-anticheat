@@ -24,7 +24,7 @@ public:
 	{
 		sAnticheatMgr->HandlePlayerLogin(player);
 		if(sConfigMgr->GetBoolDefault("Anticheat.LoginMessage", true))
-			ChatHandler(player->GetSession()).PSendSysMessage("This server is running an Anticheat Module.");
+			ChatHandler(player->GetSession()).PSendSysMessage("服务器已启用防作弊模块。");
 	}
 };
 class AnticheatWorldScript : public WorldScript
@@ -38,15 +38,15 @@ public:
 	{
 		if (sWorld->GetGameTime() > resetTime)
 		{
-			sLog->outString( "Anticheat: Resetting daily report states.");
+			sLog->outString( "防作弊:重置每日报表状态。");
 			sAnticheatMgr->ResetDailyReportStates();
 			UpdateReportResetTime();
-			sLog->outString( "Anticheat: Next daily report reset: %ld", resetTime);
+			sLog->outString( "防作弊:下次每日报告重置: %ld", resetTime);
 		}
 		if (sWorld->GetUptime() > lastIterationPlayer)
 		{
 			lastIterationPlayer = sWorld->GetUptime() + sConfigMgr->GetIntDefault("Anticheat.SaveReportsTime", 60);
-			sLog->outString( "Saving reports for %u players.", sWorld->GetPlayerCount());
+			sLog->outString( "为 %u 个玩家保存报告。", sWorld->GetPlayerCount());
 
 			for (SessionMap::const_iterator itr = sWorld->GetAllSessions().begin(); itr != sWorld->GetAllSessions().end(); ++itr)
 				if (Player* plr = itr->second->GetPlayer())
@@ -71,7 +71,7 @@ public:
 	}
 	void OnAfterConfigLoad(bool /* reload */) override // unusued parameter
 	{
-		sLog->outString("AnticheatModule Loaded.");
+		sLog->outString("防作弊模块加载。");
 	}
 	void UpdateReportResetTime()
 	{
