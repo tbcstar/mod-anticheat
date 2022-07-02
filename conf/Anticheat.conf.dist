@@ -31,6 +31,22 @@ Anticheat.ReportsForIngameWarnings = 70
 
 Anticheat.MaxReportsForDailyReport = 70
 
+#     Anticheat.ReportinChat
+#       Description: min and max total reports to trigger gm chat message spam.
+#       Default:     So with 70 being min and 80 being max, it will spam gm in chat 10 times.
+# Anticheat.ReportinChat.Min = 70
+# Anticheat.ReportinChat.Max = 80
+
+Anticheat.ReportinChat.Min = 70
+Anticheat.ReportinChat.Max = 80
+
+#     Anticheat.AlertFrequency
+#       Description: Once Ingame warngings and report in chat min is met, this will throttle to alert the gms every other count
+#       Default:     So with 1 being the default, u will get a message alert for every 1 violations.
+#       Anticheat.AlertFrequency = 1
+
+Anticheat.AlertFrequency = 1
+
 #     Anticheat.LoginMessage
 #       说明：启用登录消息“此服务器正在运行防作弊模块。”
 #       Default: 1 
@@ -61,6 +77,11 @@ Anticheat.DetectJumpHack = 1
 Anticheat.DetectTelePlaneHack = 1
 Anticheat.DetectSpeedHack = 1
 Anticheat.DetectClimbHack = 1
+Anticheat.DetectTelePortHack = 1
+Anticheat.IgnoreControlHack = 1
+Anticheat.DetectZaxisHack =1
+Anticheat.AntiSwimHack = 1
+Anticheat.DetectGravityHack = 1
 
 #     Anticheat.StricterFlyHackCheck
 #       Description: Checks moveflag ascending (may give false positives)
@@ -69,22 +90,51 @@ Anticheat.DetectClimbHack = 1
 
 Anticheat.StricterFlyHackCheck = 0
 
-#     Anticheat.KickPlayerFlyHack
-#       说明：首次检测flyhack的踢选项（可能会产生误报）
+#     Automatic Moderation Features
+#
+#     Anticheat.KickPlayer
+#     Anticheat.ReportsForKick
+#
+#       Description: 报告达到阈值时启用并自动启动
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
+#       Default:    70 - (Kick at 70 auto reports)
+#
 
-Anticheat.KickPlayerFlyHack = 0
+Anticheat.KickPlayer = 0
+Anticheat.ReportsForKick = 70
 
-#     Anticheat.KickPlayerWaterWalkHack
-#       说明：首次检测到waterwalkhack的踢选项（可能会带来误报）
+#     Anticheat.BanPlayer
+#     Anticheat.ReportsForBan
+#
+#       Description: 当报告达到阈值时启用并自动禁止
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
+#       Default:    70 - (Kick at 70 auto reports)
+#
 
-Anticheat.KickPlayerWaterWalkHack = 0
+Anticheat.BanPlayer = 0
+Anticheat.ReportsForBan = 70
+
+#     Anticheat.JailPlayer
+#     Anticheat.ReportsForJail
+#
+#       Description: Enables and Auto Jail when reports reach threshhold
+#       Default:    0 - (Disabled)
+#                   1 - (Enabled)
+#       Default:    70 - (Kick at 70 auto reports)
+#
+
+Anticheat.JailPlayer = 0
+Anticheat.ReportsForJail = 70
 
 #     Anticheat.AnnounceKick
-#       说明：当用户被踢时向所有玩家发送消息
+#     Anticheat.AnnounceBan
+#     Anticheat.AnnounceJail
+#       Description: 当用户踢出、禁止、入狱时向所有玩家发送消息。
 #       Default:    0 - (Disabled)
-#     
-Anticheat.AnnounceKick = 1
+#                   1 - (Enabled)
+
+Anticheat.AnnounceKick = 0
+Anticheat.AnnounceBan = 0
+Anticheat.AnnounceJail = 0

@@ -1,22 +1,30 @@
 /*
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
+ *MIT License
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
+ *Copyright (c) 2022 Azerothcore
  *
- * You should have received a copy of the GNU General Public License along
- * with this program. If not, see <http://www.gnu.org/licenses/>.
+ *Permission is hereby granted, free of charge, to any person obtaining a copy
+ *of this software and associated documentation files (the "Software"), to deal
+ *in the Software without restriction, including without limitation the rights
+ *to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *copies of the Software, and to permit persons to whom the Software is
+ *furnished to do so, subject to the following conditions:
+ *
+ *The above copyright notice and this permission notice shall be included in all
+ *copies or substantial portions of the Software.
+ *
+ *THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *SOFTWARE.
  */
 
 #ifndef SC_ACMGR_H
 #define SC_ACMGR_H
 
-//#include <ace/Singleton.h>
 #include "Common.h"
 #include "SharedDefines.h"
 #include "ScriptMgr.h"
@@ -30,23 +38,17 @@ class AnticheatData;
 enum ReportTypes
 {
     SPEED_HACK_REPORT = 0,
-    FLY_HACK_REPORT,
-    WALK_WATER_HACK_REPORT,
-    JUMP_HACK_REPORT,
-    TELEPORT_PLANE_HACK_REPORT,
-    CLIMB_HACK_REPORT,
-
+    FLY_HACK_REPORT = 1,
+    WALK_WATER_HACK_REPORT = 2,
+    JUMP_HACK_REPORT = 3,
+    TELEPORT_PLANE_HACK_REPORT = 4,
+    CLIMB_HACK_REPORT = 5,
+    TELEPORT_HACK_REPORT = 6,
+    IGNORE_CONTROL_REPORT = 7,
+    ZAXIS_HACK_REPORT = 8,
+    ANTISWIM_HACK_REPORT = 9,
+    GRAVITY_HACK_REPORT = 10
    // MAX_REPORT_TYPES
-};
-
-enum DetectionTypes
-{
-    SPEED_HACK_DETECTION            = 1,
-    FLY_HACK_DETECTION              = 2,
-    WALK_WATER_HACK_DETECTION       = 4,
-    JUMP_HACK_DETECTION             = 8,
-    TELEPORT_PLANE_HACK_DETECTION   = 16,
-    CLIMB_HACK_DETECTION            = 32
 };
 
 // GUID is the key.
@@ -54,7 +56,6 @@ typedef std::map<ObjectGuid, AnticheatData> AnticheatPlayersDataMap;
 
 class AnticheatMgr
 {
-//    friend class ACE_Singleton<AnticheatMgr, ACE_Null_Mutex>;
     AnticheatMgr();
     ~AnticheatMgr();
 
@@ -66,11 +67,8 @@ class AnticheatMgr
         }
 
         void StartHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode);
-        void DeletePlayerReport(Player* player, bool login);
-        void DeletePlayerData(Player* player);
-        void CreatePlayerData(Player* player);
         void SavePlayerData(Player* player);
-
+        void SavePlayerDataDaily(Player* player);
         void HandlePlayerLogin(Player* player);
         void HandlePlayerLogout(Player* player);
 
@@ -80,20 +78,25 @@ class AnticheatMgr
 
         void AnticheatGlobalCommand(ChatHandler* handler);
         void AnticheatDeleteCommand(ObjectGuid guid);
-
+        void AnticheatPurgeCommand(ChatHandler* handler);
         void ResetDailyReportStates();
     private:
         void SpeedHackDetection(Player* player, MovementInfo movementInfo);
         void FlyHackDetection(Player* player, MovementInfo movementInfo);
         void WalkOnWaterHackDetection(Player* player, MovementInfo movementInfo);
         void JumpHackDetection(Player* player, MovementInfo movementInfo,uint32 opcode);
-        void TeleportPlaneHackDetection(Player* player, MovementInfo);
-        void ClimbHackDetection(Player* player,MovementInfo movementInfo,uint32 opcode);
-
-        void BuildReport(Player* player,uint8 reportType);
+        void TeleportPlaneHackDetection(Player* player, MovementInfo, uint32 opcode);
+        void ClimbHackDetection(Player* player,MovementInfo movementInfo, uint32 opcode);
+        void AntiSwimHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode);
+        void TeleportHackDetection(Player* player, MovementInfo movementInfo);
+        void IgnoreControlHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode);
+        void ZAxisHackDetection(Player* player, MovementInfo movementInfo);
+        void GravityHackDetection(Player* player, MovementInfo movementInfo);
+        void BuildReport(Player* player,uint16 reportType);
 
         bool MustCheckTempReports(uint8 type);
-
+        uint32 _counter = 0;
+        uint32 _alertFrequency;
         AnticheatPlayersDataMap m_Players;                        ///< Player data
 };
 

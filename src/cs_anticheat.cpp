@@ -1,17 +1,27 @@
 /*
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
+ *MIT License
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
+ *Copyright (c) 2022 Azerothcore
  *
- * You should have received a copy of the GNU General Public License along
- * with this program. If not, see <http://www.gnu.org/licenses/>.
+ *Permission is hereby granted, free of charge, to any person obtaining a copy
+ *of this software and associated documentation files (the "Software"), to deal
+ *in the Software without restriction, including without limitation the rights
+ *to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *copies of the Software, and to permit persons to whom the Software is
+ *furnished to do so, subject to the following conditions:
+ *
+ *The above copyright notice and this permission notice shall be included in all
+ *copies or substantial portions of the Software.
+ *
+ *THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *SOFTWARE.
  */
+
 #include "Language.h"
 #include "ScriptMgr.h"
 #include "ObjectMgr.h"
@@ -19,12 +29,21 @@
 #include "AnticheatMgr.h"
 #include "Configuration/Config.h"
 #include "Player.h"
+#include "SpellAuras.h"
 
 #if AC_COMPILER == AC_COMPILER_GNU
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
 using namespace Acore::ChatCommands;
+
+enum Spells
+{
+    SHACKLES = 38505,
+    LFG_SPELL_DUNGEON_DESERTER = 71041,
+    BG_SPELL_DESERTER = 26013,
+    SILENCED = 23207
+};
 
 class anticheat_commandscript : public CommandScript
 {
@@ -35,11 +54,13 @@ public:
     {
         static std::vector<ChatCommand> anticheatCommandTable =
         {
-            { "global",         SEC_GAMEMASTER,     true,   &HandleAntiCheatGlobalCommand,  "" },
-            { "player",         SEC_GAMEMASTER,     true,   &HandleAntiCheatPlayerCommand,  "" },
-            { "delete",         SEC_ADMINISTRATOR,  true,   &HandleAntiCheatDeleteCommand,  "" },
-            { "jail",           SEC_GAMEMASTER,     false,  &HandleAnticheatJailCommand,    "" },
-            { "warn",           SEC_GAMEMASTER,     true,   &HandleAnticheatWarnCommand,    "" }
+            { "global",         SEC_GAMEMASTER,     true,    &HandleAntiCheatGlobalCommand,  "" },
+            { "player",         SEC_GAMEMASTER,     true,    &HandleAntiCheatPlayerCommand,  "" },
+            { "delete",         SEC_ADMINISTRATOR,  true,    &HandleAntiCheatDeleteCommand,  "" },
+            { "jail",           SEC_GAMEMASTER,     true,    &HandleAnticheatJailCommand,    "" },
+            { "parole",         SEC_ADMINISTRATOR,  true,    &HandleAnticheatParoleCommand,  "" },
+            { "purge",          SEC_ADMINISTRATOR,  true,    &HandleAntiCheatPurgeCommand,   "" },
+            { "warn",           SEC_GAMEMASTER,     true,    &HandleAnticheatWarnCommand,    "" }
         };
 
         static std::vector<ChatCommand> commandTable =
@@ -50,178 +71,175 @@ public:
         return commandTable;
     }
 
-    static bool HandleAnticheatWarnCommand(ChatHandler* handler, const char* args)
+    static bool HandleAnticheatWarnCommand(ChatHandler* handler, Optional<PlayerIdentifier> player)
     {
         if (!sConfigMgr->GetOption<bool>("Anticheat.Enabled", 0))
             return false;
 
-        Player* pTarget = NULL;
-
-        std::string strCommand;
-
-        char* command = strtok((char*)args, " ");
-
-        if (command)
-        {
-            strCommand = command;
-            normalizePlayerName(strCommand);
-
-            pTarget = ObjectAccessor::FindPlayerByName(strCommand.c_str()); // get player by name
-        }else
-            pTarget = handler->getSelectedPlayer();
-
-        if (!pTarget)
-            return false;
-
-        WorldPacket data;
-
-        // need copy to prevent corruption by strtok call in LineFromMessage original string
-        char* buf = strdup("反作弊系统已经多次报告你可能在作弊。我们会监视你以确认这是否准确。");
-        char* pos = buf;
-
-        while (char* line = handler->LineFromMessage(pos))
-        {
-            handler->BuildChatPacket(data, CHAT_MSG_SYSTEM, LANG_UNIVERSAL, NULL, NULL, line);
-            pTarget->GetSession()->SendPacket(&data);
-        }
-
-        free(buf);
-        return true;
-    }
-
-    static bool HandleAnticheatJailCommand(ChatHandler* handler, const char* args)
-    {
-		if (!sConfigMgr->GetOption<bool>("Anticheat.Enabled", 0))
-            return false;
-
-        Player* pTarget = NULL;
-
-        std::string strCommand;
-
-        char* command = strtok((char*)args, " ");
-
-        if (command)
-        {
-            strCommand = command;
-            normalizePlayerName(strCommand);
-
-            pTarget = ObjectAccessor::FindPlayerByName(strCommand.c_str()); // get player by name
-        }else
-            pTarget = handler->getSelectedPlayer();
-
-        if (!pTarget)
+        if (!player)
+            player = PlayerIdentifier::FromTarget(handler);
+        if (!player || !player->IsConnected())
         {
             handler->SendSysMessage(LANG_PLAYER_NOT_FOUND);
             handler->SetSentErrorMessage(true);
             return false;
         }
 
-        if (pTarget == handler->GetSession()->GetPlayer())
-            return false;
-
-        // teleport both to jail.
-        pTarget->TeleportTo(1,16226.5f,16403.6f,-64.5f,3.2f);
-        handler->GetSession()->GetPlayer()->TeleportTo(1,16226.5f,16403.6f,-64.5f,3.2f);
-
-
-
-        // the player should be already there, but no :(
-        // pTarget->GetPosition(&loc);
-
-        WorldLocation loc;
-        loc = WorldLocation(1, 16226.5f, 16403.6f, -64.5f, 3.2f);
-        pTarget->SetHomebind(loc, 876);
-
-
-
-        pTarget->SetHomebind(loc,876);
+        ChatHandler(player->GetConnectedPlayer()->GetSession()).SendSysMessage("The anticheat system has reported several times that you may be cheating. You will be monitored to confirm if this is accurate.");
         return true;
     }
 
-    static bool HandleAntiCheatDeleteCommand(ChatHandler* handler, const char* args)
+    static bool HandleAnticheatJailCommand(ChatHandler* handler, Optional<PlayerIdentifier> player)
     {
         if (!sConfigMgr->GetOption<bool>("Anticheat.Enabled", 0))
             return false;
 
-        std::string strCommand;
-
-        char* command = strtok((char*)args, " "); // get entered name
-
-        if (!command)
-            return true;
-
-        strCommand = command;
-
-        if (strCommand.compare("deleteall") == 0)
-            sAnticheatMgr->AnticheatDeleteCommand(ObjectGuid::Empty);
-        else
+        if (!player)
+            player = PlayerIdentifier::FromTarget(handler);
+        if (!player || !player->IsConnected())
         {
-            normalizePlayerName(strCommand);
-            Player* player = ObjectAccessor::FindPlayerByName(strCommand.c_str()); // get player by name
-            if (!player)
-                handler->PSendSysMessage("玩家不存在");
-            else
-                sAnticheatMgr->AnticheatDeleteCommand(player->GetGUID());
+            handler->SendSysMessage(LANG_PLAYER_NOT_FOUND);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        Player* pTarget = player->GetConnectedPlayer();
+
+        // teleport both to jail.
+        if (!handler->IsConsole())
+        {
+            handler->GetSession()->GetPlayer()->TeleportTo(1, 16226.5f, 16403.6f, -64.5f, 3.2f);
+        }
+
+        WorldLocation loc = WorldLocation(1, 16226.5f, 16403.6f, -64.5f, 3.2f);// GM Jail Location
+        pTarget->TeleportTo(loc);
+        pTarget->SetHomebind(loc, 876);// GM Jail Homebind location
+        pTarget->CastSpell(pTarget, SHACKLES);// shackle him in place to ensure no exploit happens for jail break attempt
+        if (Aura* dungdesert = pTarget->AddAura(LFG_SPELL_DUNGEON_DESERTER, pTarget))// LFG_SPELL_DUNGEON_DESERTER
+        {
+            dungdesert->SetDuration(-1);
+        }
+        if (Aura* bgdesert = pTarget->AddAura(BG_SPELL_DESERTER, pTarget))// BG_SPELL_DESERTER
+        {
+            bgdesert->SetDuration(-1);
+        }
+        if (Aura* silent = pTarget->AddAura(SILENCED, pTarget))// SILENCED
+        {
+            silent->SetDuration(-1);
         }
 
         return true;
     }
 
-    static bool HandleAntiCheatPlayerCommand(ChatHandler* handler, const char* args)
+    static bool HandleAnticheatParoleCommand(ChatHandler* handler, Optional<PlayerIdentifier> player)
     {
-		if (!sConfigMgr->GetOption<bool>("Anticheat.Enabled", 0))
+        if (!sConfigMgr->GetOption<bool>("Anticheat.Enabled", 0))
             return false;
 
-        std::string strCommand;
-
-        char* command = strtok((char*)args, " ");
-
-        ObjectGuid guid;
-        Player* player = nullptr;
-
-        if (command)
+        if (!player)
+            player = PlayerIdentifier::FromTarget(handler);
+        if (!player || !player->IsConnected())
         {
-            strCommand = command;
-
-            normalizePlayerName(strCommand);
-            player = ObjectAccessor::FindPlayerByName(strCommand.c_str()); // get player by name
-
-            if (player)
-                guid = player->GetGUID();
-        }else
-        {
-            player = handler->getSelectedPlayer();
-            if (player)
-                guid = player->GetGUID();
+            handler->SendSysMessage(LANG_PLAYER_NOT_FOUND);
+            handler->SetSentErrorMessage(true);
+            return false;
         }
 
-        if (!guid)
+        Player* pTarget = player->GetConnectedPlayer();
+
+        WorldLocation Aloc = WorldLocation(0, -8833.37f, 628.62f, 94.00f, 1.06f);// Stormwind
+        WorldLocation Hloc = WorldLocation(1, 1569.59f, -4397.63f, 16.06f, 0.54f);// Orgrimmar
+
+        if (pTarget->GetTeamId() == TEAM_ALLIANCE)
         {
-            handler->PSendSysMessage("没有玩家。");
-            return true;
+            pTarget->TeleportTo(0, -8833.37f, 628.62f, 94.00f, 1.06f);//Stormwind
+            pTarget->SetHomebind(Aloc, 1519);// Stormwind Homebind location
         }
-
-        float average = sAnticheatMgr->GetAverage(guid);
-        uint32 total_reports = sAnticheatMgr->GetTotalReports(guid);
-        uint32 speed_reports = sAnticheatMgr->GetTypeReports(guid, 0);
-        uint32 fly_reports = sAnticheatMgr->GetTypeReports(guid, 1);
-        uint32 jump_reports = sAnticheatMgr->GetTypeReports(guid, 3);
-        uint32 waterwalk_reports = sAnticheatMgr->GetTypeReports(guid, 2);
-        uint32 teleportplane_reports = sAnticheatMgr->GetTypeReports(guid, 4);
-        uint32 climb_reports = sAnticheatMgr->GetTypeReports(guid, 5);
-
-        handler->PSendSysMessage("关于玩家 %s 的信息",player->GetName().c_str());
-        handler->PSendSysMessage("平均: %f || 总计: %u ",average,total_reports);
-        handler->PSendSysMessage("加速报告: %u || 飞行报告: %u || 穿墙报告: %u ",speed_reports,fly_reports,jump_reports);
-        handler->PSendSysMessage("水上行走报告: %u  || 传送报告: %u",waterwalk_reports,teleportplane_reports);
-        handler->PSendSysMessage("爬升报告: %u", climb_reports);
-
+        else
+        {
+            pTarget->TeleportTo(1, 1569.59f, -4397.63f, 7.7f, 0.54f);//Orgrimmar
+            pTarget->SetHomebind(Hloc, 1653);// Orgrimmar Homebind location
+        }
+        pTarget->RemoveAura(SHACKLES);// remove shackles
+        pTarget->RemoveAura(LFG_SPELL_DUNGEON_DESERTER);// LFG_SPELL_DUNGEON_DESERTER
+        pTarget->RemoveAura(BG_SPELL_DESERTER);// BG_SPELL_DESERTER
+        pTarget->RemoveAura(SILENCED);// SILENCED
+        sAnticheatMgr->AnticheatDeleteCommand(pTarget->GetGUID());// deletes auto reports on player
         return true;
     }
 
-    static bool HandleAntiCheatGlobalCommand(ChatHandler* handler, const char* /* args */)
+    static bool HandleAntiCheatDeleteCommand(ChatHandler* handler, Optional<PlayerIdentifier> player)
     {
-		if (!sConfigMgr->GetOption<bool>("Anticheat.Enabled", 0))
+        if (!sConfigMgr->GetOption<bool>("Anticheat.Enabled", 0))
+            return false;
+
+        if (!player)
+            player = PlayerIdentifier::FromTarget(handler);
+        if (!player || !player->IsConnected())
+        {
+            handler->SendSysMessage(LANG_PLAYER_NOT_FOUND);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+        sAnticheatMgr->AnticheatDeleteCommand(player->GetGUID());
+        handler->PSendSysMessage("Anticheat players_reports_status deleted for player %s", player->GetName().c_str());
+        return true;
+    }
+
+    static bool HandleAntiCheatPlayerCommand(ChatHandler* handler, Optional<PlayerIdentifier> player)
+    {
+        if (!sConfigMgr->GetOption<bool>("Anticheat.Enabled", 0))
+            return false;
+
+        if (!player)
+        {
+            player = PlayerIdentifier::FromTarget(handler);
+        }
+        if (!player || !player->IsConnected())
+        {
+            handler->SendSysMessage(LANG_PLAYER_NOT_FOUND);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        ObjectGuid guid = player->GetGUID();
+        Player* playerTarget = player->GetConnectedPlayer();
+        if (playerTarget)
+        {
+            float average = sAnticheatMgr->GetAverage(guid);
+            uint32 total_reports = sAnticheatMgr->GetTotalReports(guid);
+            uint32 speed_reports = sAnticheatMgr->GetTypeReports(guid, 0);
+            uint32 fly_reports = sAnticheatMgr->GetTypeReports(guid, 1);
+            uint32 jump_reports = sAnticheatMgr->GetTypeReports(guid, 3);
+            uint32 waterwalk_reports = sAnticheatMgr->GetTypeReports(guid, 2);
+            uint32 teleportplane_reports = sAnticheatMgr->GetTypeReports(guid, 4);
+            uint32 climb_reports = sAnticheatMgr->GetTypeReports(guid, 5);
+            uint32 teleport_reports = sAnticheatMgr->GetTypeReports(guid, 6);
+            uint32 ignorecontrol_reports = sAnticheatMgr->GetTypeReports(guid, 7);
+            uint32 zaxis_reports = sAnticheatMgr->GetTypeReports(guid, 8);
+            uint32 antiswim_reports = sAnticheatMgr->GetTypeReports(guid, 9);
+            uint32 gravity_reports = sAnticheatMgr->GetTypeReports(guid, 10);
+            Player* playerTarget = player->GetConnectedPlayer();
+            uint32 latency = 0;
+            latency = playerTarget->GetSession()->GetLatency();
+            handler->PSendSysMessage("Information about player %s || Latency %u ms", player->GetName().c_str(), latency);
+            handler->PSendSysMessage("Average: %f || Total Reports: %u ", average, total_reports);
+            handler->PSendSysMessage("Speed Reports: %u || Fly Reports: %u || Jump Reports: %u ", speed_reports, fly_reports, jump_reports);
+            handler->PSendSysMessage("Walk On Water Reports: %u  || Teleport To Plane Reports: %u", waterwalk_reports, teleportplane_reports);
+            handler->PSendSysMessage("Teleport Reports: %u || Climb Reports: %u", teleport_reports, climb_reports);
+            handler->PSendSysMessage("Ignore Control Reports: %u || Ignore Z-Axis Reports: %u", ignorecontrol_reports, zaxis_reports);
+            handler->PSendSysMessage("Ignore Anti-Swim Reports: %u || Gravity Reports: %u", antiswim_reports, gravity_reports);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    static bool HandleAntiCheatGlobalCommand(ChatHandler* handler)
+    {
+        if (!sConfigMgr->GetOption<bool>("Anticheat.Enabled", 0))
         {
             handler->PSendSysMessage("禁用防作弊系统。");
             return true;
@@ -229,6 +247,13 @@ public:
 
         sAnticheatMgr->AnticheatGlobalCommand(handler);
 
+        return true;
+    }
+
+    static bool HandleAntiCheatPurgeCommand(ChatHandler* handler)
+    {
+        sAnticheatMgr->AnticheatPurgeCommand(handler);
+        handler->PSendSysMessage("The Anticheat daily_players_reports has been purged.");
         return true;
     }
 };
