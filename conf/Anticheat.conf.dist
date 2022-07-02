@@ -32,8 +32,8 @@ Anticheat.ReportsForIngameWarnings = 70
 Anticheat.MaxReportsForDailyReport = 70
 
 #     Anticheat.ReportinChat
-#       Description: min and max total reports to trigger gm chat message spam.
-#       Default:     So with 70 being min and 80 being max, it will spam gm in chat 10 times.
+#       Description: 触发 gm 聊天消息垃圾邮件的最小和最大总报告。
+#       Default:     因此，70 是最小值，80 是最大值，它会在聊天中向 gm 发送垃圾邮件 10 次。
 # Anticheat.ReportinChat.Min = 70
 # Anticheat.ReportinChat.Max = 80
 
@@ -41,8 +41,8 @@ Anticheat.ReportinChat.Min = 70
 Anticheat.ReportinChat.Max = 80
 
 #     Anticheat.AlertFrequency
-#       Description: Once Ingame warngings and report in chat min is met, this will throttle to alert the gms every other count
-#       Default:     So with 1 being the default, u will get a message alert for every 1 violations.
+#       Description: 一旦满足游戏内警告和图表最小值报告，这将限制每隔一个计数向 gms 发出警报
+#       Default:     因此，默认值为 1，您将收到每 1 次违规的消息警报。
 #       Anticheat.AlertFrequency = 1
 
 Anticheat.AlertFrequency = 1
@@ -84,7 +84,7 @@ Anticheat.AntiSwimHack = 1
 Anticheat.DetectGravityHack = 1
 
 #     Anticheat.StricterFlyHackCheck
-#       Description: Checks moveflag ascending (may give false positives)
+#       Description: 检查 moveflag 升序（可能给出误报）
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 
@@ -119,7 +119,7 @@ Anticheat.ReportsForBan = 70
 #     Anticheat.JailPlayer
 #     Anticheat.ReportsForJail
 #
-#       Description: Enables and Auto Jail when reports reach threshhold
+#       Description: 当报告达到阈值时启用和自动越狱
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 #       Default:    70 - (Kick at 70 auto reports)
