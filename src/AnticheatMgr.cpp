@@ -52,392 +52,6 @@ AnticheatMgr::~AnticheatMgr()
     m_Players.clear();
 }
 
-void AnticheatMgr::JumpHackDetection(Player* player, MovementInfo /* movementInfo */, uint32 opcode)
-{
-    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectJumpHack", true))
-        return;
-
-    ObjectGuid key = player->GetGUID();
-
-    if (m_Players[key].GetLastOpcode() == MSG_MOVE_JUMP && opcode == MSG_MOVE_JUMP)
-    {
-        if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
-        {
-            uint32 latency = 0;
-            latency = player->GetSession()->GetLatency();
-            LOG_INFO("anticheat.module", "AnticheatMgr:: Jump-Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
-        }
-        BuildReport(player, JUMP_HACK_REPORT);
-    }
-}
-
-void AnticheatMgr::WalkOnWaterHackDetection(Player* player, MovementInfo  movementInfo)
-{
-    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectWaterWalkHack", true))
-        return;
-
-    ObjectGuid key = player->GetGUID();
-
-    uint32 distance2D = (uint32)movementInfo.pos.GetExactDist2d(&m_Players[key].GetLastMovementInfo().pos);
-
-    // We don't need to check for a water walking hack if the player hasn't moved
-    // This is necessary since MovementHandler fires if you rotate the camera in place
-    if (!distance2D)
-        return;
-
-    if (player->GetLiquidData().Status == LIQUID_MAP_WATER_WALK && !player->IsFlying())
-    {
-        if (!m_Players[key].GetLastMovementInfo().HasMovementFlag(MOVEMENTFLAG_WATERWALKING) && !movementInfo.HasMovementFlag(MOVEMENTFLAG_WATERWALKING))
-        {
-            if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
-            {
-                uint32 latency = 0;
-                latency = player->GetSession()->GetLatency();
-                LOG_INFO("anticheat.module", "AnticheatMgr:: Walk on Water - Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
-            }
-            BuildReport(player, WALK_WATER_HACK_REPORT);
-        }
-    }
-
-    // ghost can water walk
-    if (player->HasAuraType(SPELL_AURA_GHOST))
-        return;
-
-    // Prevents the False Positive for water walking when you ressurrect.
-    if (m_Players[key].GetLastOpcode() == MSG_DELAY_GHOST_TELEPORT)
-        return;
-
-    if (m_Players[key].GetLastMovementInfo().HasMovementFlag(MOVEMENTFLAG_WATERWALKING) && movementInfo.HasMovementFlag(MOVEMENTFLAG_WATERWALKING))
-    {
-        if (player->HasAuraType(SPELL_AURA_WATER_WALK) || player->HasAuraType(SPELL_AURA_FEATHER_FALL) ||
-            player->HasAuraType(SPELL_AURA_SAFE_FALL))
-        {
-            return;
-        }
-
-    }
-    else if (!m_Players[key].GetLastMovementInfo().HasMovementFlag(MOVEMENTFLAG_WATERWALKING) && !movementInfo.HasMovementFlag(MOVEMENTFLAG_WATERWALKING))
-    {
-        return;
-    }
-
-    if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
-    {
-        uint32 latency = 0;
-        latency = player->GetSession()->GetLatency();
-        LOG_INFO("anticheat.module", "AnticheatMgr:: Walk on Water - Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
-    }
-    BuildReport(player, WALK_WATER_HACK_REPORT);
-}
-
-void AnticheatMgr::FlyHackDetection(Player* player, MovementInfo  movementInfo)
-{
-    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectFlyHack", true))
-    {
-        return;
-    }
-
-    if (player->HasAuraType(SPELL_AURA_FLY) || player->HasAuraType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED) || player->HasAuraType(SPELL_AURA_MOD_INCREASE_FLIGHT_SPEED))//overkill but wth
-    {
-        return;
-    }
-
-    /*Thanks to @LilleCarl for info to check extra flag*/
-    bool stricterChecks = true;
-    if (sConfigMgr->GetOption<bool>("Anticheat.StricterFlyHackCheck", false))
-    {
-        stricterChecks = !(movementInfo.HasMovementFlag(MOVEMENTFLAG_ASCENDING | MOVEMENTFLAG_DESCENDING) && !player->IsInWater());
-    }
-
-    if (!movementInfo.HasMovementFlag(MOVEMENTFLAG_CAN_FLY) && !movementInfo.HasMovementFlag(MOVEMENTFLAG_FLYING) && stricterChecks)
-    {
-        return;
-    }
-
-    if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
-    {
-        uint32 latency = 0;
-        latency = player->GetSession()->GetLatency();
-        LOG_INFO("anticheat.module", "AnticheatMgr:: Fly-Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
-    }
-
-    BuildReport(player, FLY_HACK_REPORT);
-}
-
-void AnticheatMgr::TeleportPlaneHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode)
-{
-    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectTelePlaneHack", true))
-        return;
-
-    //Celestial Planetarium Observer Battle has a narrow path that false flags
-    if (player && GetWMOAreaTableEntryByTripple(5202, 0, 24083))
-        return;
-
-    if (player->HasAuraType(SPELL_AURA_WATER_WALK) || player->HasAuraType(SPELL_AURA_WATER_BREATHING) || player->HasAuraType(SPELL_AURA_GHOST))
-        return;
-
-    ObjectGuid key = player->GetGUID();
-
-    uint32 distance2D = (uint32)movementInfo.pos.GetExactDist2d(&m_Players[key].GetLastMovementInfo().pos);
-
-    // We don't need to check for a water walking hack if the player hasn't moved
-    // This is necessary since MovementHandler fires if you rotate the camera in place
-    if (!distance2D)
-        return;
-
-    if (m_Players[key].GetLastOpcode() == MSG_MOVE_JUMP)
-        return;
-
-    if (opcode == (MSG_MOVE_FALL_LAND))
-        return;
-
-    if (player->GetLiquidData().Status == LIQUID_MAP_ABOVE_WATER)
-        return;
-
-    if (movementInfo.HasMovementFlag(MOVEMENTFLAG_FALLING | MOVEMENTFLAG_SWIMMING))
-        return;
-
-    // If he is flying we dont need to check
-    if (movementInfo.HasMovementFlag(MOVEMENTFLAG_CAN_FLY | MOVEMENTFLAG_FLYING))
-        return;
-
-    float pos_z = player->GetPositionZ();
-    float ground_Z = player->GetFloorZ();
-    float groundZ = player->GetMapHeight(player->GetPositionX(), player->GetPositionY(), MAX_HEIGHT);
-    float floorZ = player->GetMapHeight(player->GetPositionX(), player->GetPositionY(), player->GetPositionZ());
-
-    // we are not really walking there
-    if (groundZ == floorZ && (fabs(ground_Z - pos_z) > 2.0f || fabs(ground_Z - pos_z) < -1.0f))
-    {
-        if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
-        {
-            uint32 latency = 0;
-            latency = player->GetSession()->GetLatency();
-            LOG_INFO("anticheat.module", "AnticheatMgr:: Teleport To Plane - Hack detected player {} ({})  - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
-        }
-
-        BuildReport(player, TELEPORT_PLANE_HACK_REPORT);
-    }
-
-}
-
-void AnticheatMgr::IgnoreControlHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode)
-{
-    float x, y;
-    player->GetPosition(x, y);
-    ObjectGuid key = player->GetGUID();
-
-    if (!sConfigMgr->GetOption<bool>("Anticheat.IgnoreControlHack", true))
-        return;
-
-    if (m_Players[key].GetLastOpcode() == MSG_MOVE_JUMP)
-        return;
-
-    if (opcode == (MSG_MOVE_FALL_LAND))
-        return;
-
-    if (movementInfo.HasMovementFlag(MOVEMENTFLAG_FALLING | MOVEMENTFLAG_SWIMMING))
-        return;
-
-    uint32 latency = 0;
-    latency = player->GetSession()->GetLatency() >= 400;
-    if (player->HasUnitState(UNIT_STATE_ROOT) && !player->GetVehicle() && !latency)
-    {
-        bool unrestricted = movementInfo.pos.GetPositionX() != x || movementInfo.pos.GetPositionY() != y;
-        if (unrestricted)
-        {
-            if (m_Players[key].GetTotalReports() > sConfigMgr->GetOption<uint32>("Anticheat.ReportsForIngameWarnings", 70))
-            {
-                _alertFrequency = sConfigMgr->GetOption<uint32>("Anticheat.AlertFrequency", 5);
-                // So we dont divide by 0 by accident
-                if (_alertFrequency < 1)
-                    _alertFrequency = 1;
-                if (++_counter % _alertFrequency == 0)
-                {
-                    // display warning at the center of the screen, hacky way?
-                    std::string str = "|cFFFFFC00[Playername:|cFF00FFFF[|cFF60FF00" + std::string(player->GetName().c_str()) + "|cFF00FFFF] Possible Ignore Control Hack Detected!";
-                    WorldPacket data(SMSG_NOTIFICATION, (str.size() + 1));
-                    data << str;
-                    sWorld->SendGlobalGMMessage(&data);
-                    uint32 latency = 0;
-                    latency = player->GetSession()->GetLatency();
-                    // need better way to limit chat spam
-                    if (m_Players[key].GetTotalReports() >= sConfigMgr->GetOption<uint32>("Anticheat.ReportinChat.Min", 70) && m_Players[key].GetTotalReports() <= sConfigMgr->GetOption<uint32>("Anticheat.ReportinChat.Max", 80))
-                    {
-                        sWorld->SendGMText(LANG_ANTICHEAT_IGNORECONTROL, player->GetName().c_str(), latency);
-                    }
-                _counter = 0;
-                }
-            }
-            if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
-            {
-                uint32 latency = 0;
-                latency = player->GetSession()->GetLatency();
-                LOG_INFO("anticheat.module", "AnticheatMgr:: Ignore Control - Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
-            }
-
-            BuildReport(player, IGNORE_CONTROL_REPORT);
-        }
-    }
-
-}
-
-void AnticheatMgr::ZAxisHackDetection(Player* player, MovementInfo movementInfo)
-{
-    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectZaxisHack", true))
-        return;
-
-    // If he is flying we dont need to check
-    if (movementInfo.HasMovementFlag(MOVEMENTFLAG_CAN_FLY | MOVEMENTFLAG_FLYING))
-        return;
-
-    // If the player is allowed to waterwalk (or he is dead because he automatically waterwalks then) we dont need to check any further
-    // We also stop if the player is in water, because otherwise you get a false positive for swimming
-    if (movementInfo.HasMovementFlag(MOVEMENTFLAG_WATERWALKING) || player->IsInWater() || !player->IsAlive())
-        return;
-
-    //Celestial Planetarium Observer Battle has a narrow path that false flags
-    if (player && GetWMOAreaTableEntryByTripple(5202, 0, 24083))
-        return;
-
-    // We want to exclude this LiquidStatus from detection because it leads to false positives on boats, docks etc.
-    // Basically everytime you stand on a game object in water
-    if (player && player->GetLiquidData().Status == LIQUID_MAP_ABOVE_WATER)
-        return;
-
-    ObjectGuid key = player->GetGUID();
-
-    uint32 distance2D = (uint32)movementInfo.pos.GetExactDist2d(&m_Players[key].GetLastMovementInfo().pos);
-
-    // We don't need to check for a ignore z if the player hasn't moved
-    // This is necessary since MovementHandler fires if you rotate the camera in place
-    if (!distance2D)
-        return;
-
-    // This is Black Magic. Check only for x and y difference but no z difference that is greater then or equal to z +2.5 of the ground
-    if (m_Players[key].GetLastMovementInfo().pos.GetPositionZ() == movementInfo.pos.GetPositionZ()
-        && player->GetPositionZ() >= player->GetFloorZ() + 2.5f)
-    {
-        if (m_Players[key].GetTotalReports() > sConfigMgr->GetOption<uint32>("Anticheat.ReportsForIngameWarnings", 70))
-        {
-            _alertFrequency = sConfigMgr->GetOption<uint32>("Anticheat.AlertFrequency", 5);
-            // So we dont divide by 0 by accident
-            if (_alertFrequency < 1)
-                _alertFrequency = 1;
-            if (++_counter % _alertFrequency == 0)
-            {
-                // display warning at the center of the screen, hacky way?
-                std::string str = "|cFFFFFC00[Playername:|cFF00FFFF[|cFF60FF00" + std::string(player->GetName().c_str()) + "|cFF00FFFF] Possible Ignore Zaxis Hack Detected!";
-                WorldPacket data(SMSG_NOTIFICATION, (str.size() + 1));
-                data << str;
-                sWorld->SendGlobalGMMessage(&data);
-                // need better way to limit chat spam
-                if (m_Players[key].GetTotalReports() >= sConfigMgr->GetOption<uint32>("Anticheat.ReportinChat.Min", 70) && m_Players[key].GetTotalReports() <= sConfigMgr->GetOption<uint32>("Anticheat.ReportinChat.Max", 80))
-                {
-                    uint32 latency = 0;
-                    latency = player->GetSession()->GetLatency();
-                    sWorld->SendGMText(LANG_ANTICHEAT_ALERT, player->GetName().c_str(), player->GetName().c_str(), latency);
-                }
-                _counter = 0;
-            }
-        }
-        if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
-        {
-            uint32 latency = 0;
-            latency = player->GetSession()->GetLatency();
-            LOG_INFO("anticheat.module", "AnticheatMgr:: Ignore Zaxis Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
-        }
- 
-        BuildReport(player, ZAXIS_HACK_REPORT);
-    }
- 
-}
-
-void AnticheatMgr::TeleportHackDetection(Player* player, MovementInfo movementInfo)
-{
-    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectTelePortHack", true))
-        return;
-
-    ObjectGuid key = player->GetGUID();
-
-    if (m_Players[key].GetLastMovementInfo().pos.GetPositionX() == movementInfo.pos.GetPositionX())
-        return;
-
-    float lastX = m_Players[key].GetLastMovementInfo().pos.GetPositionX();
-    float newX = movementInfo.pos.GetPositionX();
-
-    float lastY = m_Players[key].GetLastMovementInfo().pos.GetPositionY();
-    float newY = movementInfo.pos.GetPositionY();
-
-    float xDiff = fabs(lastX - newX);
-    float yDiff = fabs(lastY - newY);
-
-    if (player->duel)
-    {
-        if ((xDiff >= 50.0f || yDiff >= 50.0f) && !player->CanTeleport())
-        {
-            Player* opponent = player->duel->Opponent;
-
-            std::string str = "|cFFFFFC00[DUEL ALERT Playername:|cFF00FFFF[|cFF60FF00" + std::string(player->GetName().c_str()) + "|cFF00FFFF] Possible Teleport Hack Detected! While Dueling [|cFF60FF00" + std::string(opponent->GetName().c_str()) + "|cFF00FFFF]";
-            WorldPacket data(SMSG_NOTIFICATION, (str.size() + 1));
-            data << str;
-            sWorld->SendGlobalGMMessage(&data);
-            uint32 latency = 0;
-            latency = player->GetSession()->GetLatency();
-            uint32 latency2 = 0;
-            latency2 = opponent->GetSession()->GetLatency();
-            sWorld->SendGMText(LANG_ANTICHEAT_DUEL, player->GetName().c_str(), latency, opponent->GetName().c_str(), latency2);
-
-            if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
-            {
-                LOG_INFO("anticheat.module", "AnticheatMgr:: DUEL ALERT Teleport-Hack detected player {} ({}) while dueling {} - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), opponent->GetName(), latency);
-                LOG_INFO("anticheat.module", "AnticheatMgr:: DUEL ALERT Teleport-Hack detected player {} ({}) while dueling {} - Latency: {} ms", opponent->GetName(), opponent->GetGUID().ToString(), player->GetName(), latency2);
-            }
-            BuildReport(player, TELEPORT_HACK_REPORT);
-            BuildReport(opponent, TELEPORT_HACK_REPORT);
-        }
-        else if (player->CanTeleport())
-            player->SetCanTeleport(false);
-    }
-
-    if ((xDiff >= 50.0f || yDiff >= 50.0f) && !player->CanTeleport())
-    {
-        if (m_Players[key].GetTotalReports() > sConfigMgr->GetOption<uint32>("Anticheat.ReportsForIngameWarnings", 70))
-        {
-            _alertFrequency = sConfigMgr->GetOption<uint32>("Anticheat.AlertFrequency", 5);
-            // So we dont divide by 0 by accident
-            if (_alertFrequency < 1)
-                _alertFrequency = 1;
-            if (++_counter % _alertFrequency == 0)
-            {
-                // display warning at the center of the screen, hacky way?
-                std::string str = "|cFFFFFC00[Playername:|cFF00FFFF[|cFF60FF00" + std::string(player->GetName().c_str()) + "|cFF00FFFF] Possible Teleport Hack Detected!";
-                WorldPacket data(SMSG_NOTIFICATION, (str.size() + 1));
-                data << str;
-                sWorld->SendGlobalGMMessage(&data);
-                uint32 latency = 0;
-                latency = player->GetSession()->GetLatency();
-                // need better way to limit chat spam
-                if (m_Players[key].GetTotalReports() >= sConfigMgr->GetOption<uint32>("Anticheat.ReportinChat.Min", 70) && m_Players[key].GetTotalReports() <= sConfigMgr->GetOption<uint32>("Anticheat.ReportinChat.Max", 80))
-                {
-                    sWorld->SendGMText(LANG_ANTICHEAT_TELEPORT, player->GetName().c_str(), latency);
-                }
-                _counter = 0;
-            }
-        }
-        if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
-        {
-            uint32 latency = 0;
-            latency = player->GetSession()->GetLatency();
-            LOG_INFO("anticheat.module", "AnticheatMgr:: Teleport-Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
-        }
-
-        BuildReport(player, TELEPORT_HACK_REPORT);
-    }
-    else if (player->CanTeleport())
-        player->SetCanTeleport(false);
-}
-
 void AnticheatMgr::StartHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode)
 {
     if (!sConfigMgr->GetOption<bool>("Anticheat.Enabled", 0))
@@ -475,114 +89,9 @@ void AnticheatMgr::StartHackDetection(Player* player, MovementInfo movementInfo,
     {
         AntiSwimHackDetection(player, movementInfo, opcode);
     }
+    AntiKnockBackHactDetection(player, movementInfo);
     m_Players[key].SetLastMovementInfo(movementInfo);
     m_Players[key].SetLastOpcode(opcode);
-}
-
-// basic detection
-void AnticheatMgr::ClimbHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode)
-{
-    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectClimbHack", true))
-        return;
-
-    // in this case we don't care if they are "legal" flags, they are handled in another parts of the Anticheat Manager.
-    if (player->IsInWater() ||
-        player->IsFlying() ||
-        player->IsFalling())
-        return;
-
-    // If the player jumped, we dont want to check for climb hack
-    // This can lead to false positives for climbing game objects legit
-    if (opcode == MSG_MOVE_JUMP)
-        return;
-
-    if (player->HasUnitMovementFlag(MOVEMENTFLAG_FALLING))
-        return;
-
-    Position playerPos = player->GetPosition();
-
-    float diffz = fabs(movementInfo.pos.GetPositionZ() - playerPos.GetPositionZ());
-    float tanangle = movementInfo.pos.GetExactDist2d(&playerPos) / diffz;
-
-    if (!player->HasUnitMovementFlag(MOVEMENTFLAG_CAN_FLY | MOVEMENTFLAG_FLYING | MOVEMENTFLAG_SWIMMING))
-    {
-        if (movementInfo.pos.GetPositionZ() > playerPos.GetPositionZ() &&
-            diffz > 1.87f && tanangle < 0.57735026919f) // 30 degrees
-        {
-            if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
-            {
-                uint32 latency = 0;
-                latency = player->GetSession()->GetLatency();
-                LOG_INFO("anticheat.module", "AnticheatMgr:: Climb-Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
-            }
-
-            BuildReport(player, CLIMB_HACK_REPORT);
-        }
-    }
-}
-
-// basic detection
-void AnticheatMgr::AntiSwimHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode)
-{
-    if (!sConfigMgr->GetOption<bool>("Anticheat.AntiSwimHack", true))
-        return;
-
-    if (player->GetAreaId())
-    {
-        switch (player->GetAreaId())
-        {
-        case 2100: //Maraudon https://github.com/azerothcore/azerothcore-wotlk/issues/2437
-            return;
-        }
-    }
-
-    if (player->GetLiquidData().Status == (LIQUID_MAP_ABOVE_WATER | LIQUID_MAP_WATER_WALK | LIQUID_MAP_IN_WATER))
-    {
-        return;
-    }
-
-    if (opcode == MSG_MOVE_JUMP)
-        return;
-
-    if (movementInfo.HasMovementFlag(MOVEMENTFLAG_FALLING | MOVEMENTFLAG_SWIMMING))
-        return;
-
-    if (player->GetLiquidData().Status == LIQUID_MAP_UNDER_WATER && !movementInfo.HasMovementFlag(MOVEMENTFLAG_SWIMMING))
-    {
-        if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
-        {
-            uint32 latency = 0;
-            latency = player->GetSession()->GetLatency();
-            LOG_INFO("anticheat.module", "AnticheatMgr:: Anti-Swim-Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
-        }
-
-        BuildReport(player, ANTISWIM_HACK_REPORT);
-
-    }
-}
-
-void AnticheatMgr::GravityHackDetection(Player* player, MovementInfo movementInfo)
-{
-    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectGravityHack", true))
-        return;
-
-    if (player->HasAuraType(SPELL_AURA_FEATHER_FALL))
-        return;
-
-    ObjectGuid key = player->GetGUID();
-    if (m_Players[key].GetLastOpcode() == MSG_MOVE_JUMP)
-    {
-        if (!player->HasUnitMovementFlag(MOVEMENTFLAG_DISABLE_GRAVITY) && movementInfo.jump.zspeed < -10.0f)
-        {
-            if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
-            {
-                uint32 latency = 0;
-                latency = player->GetSession()->GetLatency();
-                LOG_INFO("anticheat.module", "AnticheatMgr:: Gravity-Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
-            }
-            BuildReport(player, GRAVITY_HACK_REPORT);
-        }
-    }
 }
 
 void AnticheatMgr::SpeedHackDetection(Player* player, MovementInfo movementInfo)
@@ -689,6 +198,529 @@ void AnticheatMgr::SpeedHackDetection(Player* player, MovementInfo movementInfo)
     }
 }
 
+void AnticheatMgr::FlyHackDetection(Player* player, MovementInfo  movementInfo)
+{
+    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectFlyHack", true))
+    {
+        return;
+    }
+
+    if (player->HasAuraType(SPELL_AURA_FLY) || player->HasAuraType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED) || player->HasAuraType(SPELL_AURA_MOD_INCREASE_FLIGHT_SPEED))//overkill but wth
+    {
+        return;
+    }
+
+    /*Thanks to @LilleCarl for info to check extra flag*/
+    bool stricterChecks = true;
+    if (sConfigMgr->GetOption<bool>("Anticheat.StricterFlyHackCheck", false))
+    {
+        stricterChecks = !(movementInfo.HasMovementFlag(MOVEMENTFLAG_ASCENDING | MOVEMENTFLAG_DESCENDING) && !player->IsInWater());
+    }
+
+    if (!movementInfo.HasMovementFlag(MOVEMENTFLAG_CAN_FLY) && !movementInfo.HasMovementFlag(MOVEMENTFLAG_FLYING) && stricterChecks)
+    {
+        return;
+    }
+
+    if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
+    {
+        uint32 latency = 0;
+        latency = player->GetSession()->GetLatency();
+        LOG_INFO("anticheat.module", "AnticheatMgr:: Fly-Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
+    }
+
+    BuildReport(player, FLY_HACK_REPORT);
+}
+
+void AnticheatMgr::JumpHackDetection(Player* player, MovementInfo /* movementInfo */, uint32 opcode)
+{
+    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectJumpHack", true))
+        return;
+
+    ObjectGuid key = player->GetGUID();
+
+    if (m_Players[key].GetLastOpcode() == MSG_MOVE_JUMP && opcode == MSG_MOVE_JUMP)
+    {
+        if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
+        {
+            uint32 latency = 0;
+            latency = player->GetSession()->GetLatency();
+            LOG_INFO("anticheat.module", "AnticheatMgr:: Jump-Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
+        }
+        BuildReport(player, JUMP_HACK_REPORT);
+    }
+}
+
+
+void AnticheatMgr::TeleportPlaneHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode)
+{
+    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectTelePlaneHack", true))
+        return;
+
+    //Celestial Planetarium Observer Battle has a narrow path that false flags
+    if (player && GetWMOAreaTableEntryByTripple(5202, 0, 24083))
+        return;
+
+    if (player->HasAuraType(SPELL_AURA_WATER_WALK) || player->HasAuraType(SPELL_AURA_WATER_BREATHING) || player->HasAuraType(SPELL_AURA_GHOST))
+        return;
+
+    ObjectGuid key = player->GetGUID();
+
+    uint32 distance2D = (uint32)movementInfo.pos.GetExactDist2d(&m_Players[key].GetLastMovementInfo().pos);
+
+    // We don't need to check for a water walking hack if the player hasn't moved
+    // This is necessary since MovementHandler fires if you rotate the camera in place
+    if (!distance2D)
+        return;
+
+    if (m_Players[key].GetLastOpcode() == MSG_MOVE_JUMP)
+        return;
+
+    if (opcode == (MSG_MOVE_FALL_LAND))
+        return;
+
+    if (player->GetLiquidData().Status == LIQUID_MAP_ABOVE_WATER)
+        return;
+
+    if (movementInfo.HasMovementFlag(MOVEMENTFLAG_FALLING | MOVEMENTFLAG_SWIMMING))
+        return;
+
+    // If he is flying we dont need to check
+    if (movementInfo.HasMovementFlag(MOVEMENTFLAG_CAN_FLY | MOVEMENTFLAG_FLYING))
+        return;
+
+    float pos_z = player->GetPositionZ();
+    float ground_Z = player->GetFloorZ();
+    float groundZ = player->GetMapHeight(player->GetPositionX(), player->GetPositionY(), MAX_HEIGHT);
+    float floorZ = player->GetMapHeight(player->GetPositionX(), player->GetPositionY(), player->GetPositionZ());
+
+    // we are not really walking there
+    if (groundZ == floorZ && (fabs(ground_Z - pos_z) > 2.0f || fabs(ground_Z - pos_z) < -1.0f))
+    {
+        if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
+        {
+            uint32 latency = 0;
+            latency = player->GetSession()->GetLatency();
+            LOG_INFO("anticheat.module", "AnticheatMgr:: Teleport To Plane - Hack detected player {} ({})  - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
+        }
+
+        BuildReport(player, TELEPORT_PLANE_HACK_REPORT);
+    }
+
+}
+
+void AnticheatMgr::ClimbHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode)
+{
+    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectClimbHack", true))
+        return;
+
+    // in this case we don't care if they are "legal" flags, they are handled in another parts of the Anticheat Manager.
+    if (player->IsInWater() ||
+        player->IsFlying() ||
+        player->IsFalling())
+        return;
+
+    // If the player jumped, we dont want to check for climb hack
+    // This can lead to false positives for climbing game objects legit
+    if (opcode == MSG_MOVE_JUMP)
+        return;
+
+    if (player->HasUnitMovementFlag(MOVEMENTFLAG_FALLING))
+        return;
+
+    Position playerPos = player->GetPosition();
+
+    float diffz = fabs(movementInfo.pos.GetPositionZ() - playerPos.GetPositionZ());
+    float tanangle = movementInfo.pos.GetExactDist2d(&playerPos) / diffz;
+
+    if (!player->HasUnitMovementFlag(MOVEMENTFLAG_CAN_FLY | MOVEMENTFLAG_FLYING | MOVEMENTFLAG_SWIMMING))
+    {
+        if (movementInfo.pos.GetPositionZ() > playerPos.GetPositionZ() &&
+            diffz > 1.87f && tanangle < 0.57735026919f) // 30 degrees
+        {
+            if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
+            {
+                uint32 latency = 0;
+                latency = player->GetSession()->GetLatency();
+                LOG_INFO("anticheat.module", "AnticheatMgr:: Climb-Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
+            }
+
+            BuildReport(player, CLIMB_HACK_REPORT);
+        }
+    }
+}
+
+void AnticheatMgr::TeleportHackDetection(Player* player, MovementInfo movementInfo)
+{
+    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectTelePortHack", true))
+        return;
+
+    ObjectGuid key = player->GetGUID();
+
+    if (m_Players[key].GetLastMovementInfo().pos.GetPositionX() == movementInfo.pos.GetPositionX())
+        return;
+
+    float lastX = m_Players[key].GetLastMovementInfo().pos.GetPositionX();
+    float newX = movementInfo.pos.GetPositionX();
+
+    float lastY = m_Players[key].GetLastMovementInfo().pos.GetPositionY();
+    float newY = movementInfo.pos.GetPositionY();
+
+    float lastZ = m_Players[key].GetLastMovementInfo().pos.GetPositionZ();
+    float newZ = movementInfo.pos.GetPositionZ();
+
+    float xDiff = fabs(lastX - newX);
+    float yDiff = fabs(lastY - newY);
+    float zDiff = fabs(lastZ - newZ);
+
+    if (player->duel)
+    {
+        if ((xDiff >= 50.0f || yDiff >= 50.0f || zDiff >= 10.0f) && !player->CanTeleport())
+        {
+            Player* opponent = player->duel->Opponent;
+
+            std::string str = "|cFFFFFC00[DUEL ALERT Playername:|cFF00FFFF[|cFF60FF00" + std::string(player->GetName().c_str()) + "|cFF00FFFF] Possible Teleport Hack Detected! While Dueling [|cFF60FF00" + std::string(opponent->GetName().c_str()) + "|cFF00FFFF]";
+            WorldPacket data(SMSG_NOTIFICATION, (str.size() + 1));
+            data << str;
+            sWorld->SendGlobalGMMessage(&data);
+            uint32 latency = 0;
+            latency = player->GetSession()->GetLatency();
+            uint32 latency2 = 0;
+            latency2 = opponent->GetSession()->GetLatency();
+            sWorld->SendGMText(LANG_ANTICHEAT_DUEL, player->GetName().c_str(), latency, opponent->GetName().c_str(), latency2);
+
+            if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
+            {
+                LOG_INFO("anticheat.module", "AnticheatMgr:: DUEL ALERT Teleport-Hack detected player {} ({}) while dueling {} - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), opponent->GetName(), latency);
+                LOG_INFO("anticheat.module", "AnticheatMgr:: DUEL ALERT Teleport-Hack detected player {} ({}) while dueling {} - Latency: {} ms", opponent->GetName(), opponent->GetGUID().ToString(), player->GetName(), latency2);
+            }
+            BuildReport(player, TELEPORT_HACK_REPORT);
+            BuildReport(opponent, TELEPORT_HACK_REPORT);
+        }
+        else if (player->CanTeleport())
+            player->SetCanTeleport(false);
+    }
+
+    if ((xDiff >= 50.0f || yDiff >= 50.0f || zDiff >= 10.0f) && !player->CanTeleport())
+    {
+        if (m_Players[key].GetTotalReports() > sConfigMgr->GetOption<uint32>("Anticheat.ReportsForIngameWarnings", 70))
+        {
+            _alertFrequency = sConfigMgr->GetOption<uint32>("Anticheat.AlertFrequency", 5);
+            // So we dont divide by 0 by accident
+            if (_alertFrequency < 1)
+                _alertFrequency = 1;
+            if (++_counter % _alertFrequency == 0)
+            {
+                // display warning at the center of the screen, hacky way?
+                std::string str = "|cFFFFFC00[Playername:|cFF00FFFF[|cFF60FF00" + std::string(player->GetName().c_str()) + "|cFF00FFFF] Possible Teleport Hack Detected!";
+                WorldPacket data(SMSG_NOTIFICATION, (str.size() + 1));
+                data << str;
+                sWorld->SendGlobalGMMessage(&data);
+                uint32 latency = 0;
+                latency = player->GetSession()->GetLatency();
+                // need better way to limit chat spam
+                if (m_Players[key].GetTotalReports() >= sConfigMgr->GetOption<uint32>("Anticheat.ReportinChat.Min", 70) && m_Players[key].GetTotalReports() <= sConfigMgr->GetOption<uint32>("Anticheat.ReportinChat.Max", 80))
+                {
+                    sWorld->SendGMText(LANG_ANTICHEAT_TELEPORT, player->GetName().c_str(), latency);
+                }
+                _counter = 0;
+            }
+        }
+        if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
+        {
+            uint32 latency = 0;
+            latency = player->GetSession()->GetLatency();
+            LOG_INFO("anticheat.module", "AnticheatMgr:: Teleport-Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
+        }
+
+        BuildReport(player, TELEPORT_HACK_REPORT);
+    }
+    else if (player->CanTeleport())
+        player->SetCanTeleport(false);
+}
+
+void AnticheatMgr::IgnoreControlHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode)
+{
+    float x, y;
+    player->GetPosition(x, y);
+    ObjectGuid key = player->GetGUID();
+
+    if (!sConfigMgr->GetOption<bool>("Anticheat.IgnoreControlHack", true))
+        return;
+
+    if (m_Players[key].GetLastOpcode() == MSG_MOVE_JUMP)
+        return;
+
+    if (opcode == (MSG_MOVE_FALL_LAND))
+        return;
+
+    if (movementInfo.HasMovementFlag(MOVEMENTFLAG_FALLING | MOVEMENTFLAG_SWIMMING))
+        return;
+
+    uint32 latency = 0;
+    latency = player->GetSession()->GetLatency() >= 400;
+    if (player->HasUnitState(UNIT_STATE_ROOT | UNIT_STATE_STUNNED) && !player->GetVehicle() && !latency)
+    {
+        bool unrestricted = movementInfo.pos.GetPositionX() != x || movementInfo.pos.GetPositionY() != y;
+        if (unrestricted)
+        {
+            if (m_Players[key].GetTotalReports() > sConfigMgr->GetOption<uint32>("Anticheat.ReportsForIngameWarnings", 70))
+            {
+                _alertFrequency = sConfigMgr->GetOption<uint32>("Anticheat.AlertFrequency", 5);
+                // So we dont divide by 0 by accident
+                if (_alertFrequency < 1)
+                    _alertFrequency = 1;
+                if (++_counter % _alertFrequency == 0)
+                {
+                    // display warning at the center of the screen, hacky way?
+                    std::string str = "|cFFFFFC00[Playername:|cFF00FFFF[|cFF60FF00" + std::string(player->GetName().c_str()) + "|cFF00FFFF] Possible Ignore Control Hack Detected!";
+                    WorldPacket data(SMSG_NOTIFICATION, (str.size() + 1));
+                    data << str;
+                    sWorld->SendGlobalGMMessage(&data);
+                    uint32 latency = 0;
+                    latency = player->GetSession()->GetLatency();
+                    // need better way to limit chat spam
+                    if (m_Players[key].GetTotalReports() >= sConfigMgr->GetOption<uint32>("Anticheat.ReportinChat.Min", 70) && m_Players[key].GetTotalReports() <= sConfigMgr->GetOption<uint32>("Anticheat.ReportinChat.Max", 80))
+                    {
+                        sWorld->SendGMText(LANG_ANTICHEAT_IGNORECONTROL, player->GetName().c_str(), latency);
+                    }
+                    _counter = 0;
+                }
+            }
+            if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
+            {
+                uint32 latency = 0;
+                latency = player->GetSession()->GetLatency();
+                LOG_INFO("anticheat.module", "AnticheatMgr:: Ignore Control - Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
+            }
+
+            BuildReport(player, IGNORE_CONTROL_REPORT);
+        }
+    }
+
+}
+
+void AnticheatMgr::GravityHackDetection(Player* player, MovementInfo movementInfo)
+{
+    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectGravityHack", true))
+        return;
+
+    if (player->HasAuraType(SPELL_AURA_FEATHER_FALL))
+        return;
+
+    ObjectGuid key = player->GetGUID();
+    if (m_Players[key].GetLastOpcode() == MSG_MOVE_JUMP)
+    {
+        if (!player->HasUnitMovementFlag(MOVEMENTFLAG_DISABLE_GRAVITY) && movementInfo.jump.zspeed < -10.0f)
+        {
+            if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
+            {
+                uint32 latency = 0;
+                latency = player->GetSession()->GetLatency();
+                LOG_INFO("anticheat.module", "AnticheatMgr:: Gravity-Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
+            }
+            BuildReport(player, GRAVITY_HACK_REPORT);
+        }
+    }
+}
+
+void AnticheatMgr::WalkOnWaterHackDetection(Player* player, MovementInfo  movementInfo)
+{
+    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectWaterWalkHack", true))
+        return;
+
+    ObjectGuid key = player->GetGUID();
+
+    uint32 distance2D = (uint32)movementInfo.pos.GetExactDist2d(&m_Players[key].GetLastMovementInfo().pos);
+
+    // We don't need to check for a water walking hack if the player hasn't moved
+    // This is necessary since MovementHandler fires if you rotate the camera in place
+    if (!distance2D)
+        return;
+
+    if (player->GetLiquidData().Status == LIQUID_MAP_WATER_WALK && !player->IsFlying())
+    {
+        if (!m_Players[key].GetLastMovementInfo().HasMovementFlag(MOVEMENTFLAG_WATERWALKING) && !movementInfo.HasMovementFlag(MOVEMENTFLAG_WATERWALKING))
+        {
+            if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
+            {
+                uint32 latency = 0;
+                latency = player->GetSession()->GetLatency();
+                LOG_INFO("anticheat.module", "AnticheatMgr:: Walk on Water - Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
+            }
+            BuildReport(player, WALK_WATER_HACK_REPORT);
+        }
+    }
+
+    // ghost can water walk
+    if (player->HasAuraType(SPELL_AURA_GHOST))
+        return;
+
+    // Prevents the False Positive for water walking when you ressurrect.
+    if (m_Players[key].GetLastOpcode() == MSG_DELAY_GHOST_TELEPORT)
+        return;
+
+    if (m_Players[key].GetLastMovementInfo().HasMovementFlag(MOVEMENTFLAG_WATERWALKING) && movementInfo.HasMovementFlag(MOVEMENTFLAG_WATERWALKING))
+    {
+        if (player->HasAuraType(SPELL_AURA_WATER_WALK) || player->HasAuraType(SPELL_AURA_FEATHER_FALL) ||
+            player->HasAuraType(SPELL_AURA_SAFE_FALL))
+        {
+            return;
+        }
+
+    }
+    else if (!m_Players[key].GetLastMovementInfo().HasMovementFlag(MOVEMENTFLAG_WATERWALKING) && !movementInfo.HasMovementFlag(MOVEMENTFLAG_WATERWALKING))
+    {
+        return;
+    }
+
+    if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
+    {
+        uint32 latency = 0;
+        latency = player->GetSession()->GetLatency();
+        LOG_INFO("anticheat.module", "AnticheatMgr:: Walk on Water - Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
+    }
+    BuildReport(player, WALK_WATER_HACK_REPORT);
+}
+
+void AnticheatMgr::ZAxisHackDetection(Player* player, MovementInfo movementInfo)
+{
+    if (!sConfigMgr->GetOption<bool>("Anticheat.DetectZaxisHack", true))
+        return;
+
+    // If he is flying we dont need to check
+    if (movementInfo.HasMovementFlag(MOVEMENTFLAG_CAN_FLY | MOVEMENTFLAG_FLYING))
+        return;
+
+    // If the player is allowed to waterwalk (or he is dead because he automatically waterwalks then) we dont need to check any further
+    // We also stop if the player is in water, because otherwise you get a false positive for swimming
+    if (movementInfo.HasMovementFlag(MOVEMENTFLAG_WATERWALKING) || player->IsInWater() || !player->IsAlive())
+        return;
+
+    //Celestial Planetarium Observer Battle has a narrow path that false flags
+    if (player && GetWMOAreaTableEntryByTripple(5202, 0, 24083))
+        return;
+
+    // We want to exclude this LiquidStatus from detection because it leads to false positives on boats, docks etc.
+    // Basically everytime you stand on a game object in water
+    if (player && player->GetLiquidData().Status == LIQUID_MAP_ABOVE_WATER)
+        return;
+
+    ObjectGuid key = player->GetGUID();
+
+    uint32 distance2D = (uint32)movementInfo.pos.GetExactDist2d(&m_Players[key].GetLastMovementInfo().pos);
+
+    // We don't need to check for a ignore z if the player hasn't moved
+    // This is necessary since MovementHandler fires if you rotate the camera in place
+    if (!distance2D)
+        return;
+
+    // This is Black Magic. Check only for x and y difference but no z difference that is greater then or equal to z +2.5 of the ground
+    if (m_Players[key].GetLastMovementInfo().pos.GetPositionZ() == movementInfo.pos.GetPositionZ()
+        && player->GetPositionZ() >= player->GetFloorZ() + 2.5f)
+    {
+        if (m_Players[key].GetTotalReports() > sConfigMgr->GetOption<uint32>("Anticheat.ReportsForIngameWarnings", 70))
+        {
+            _alertFrequency = sConfigMgr->GetOption<uint32>("Anticheat.AlertFrequency", 5);
+            // So we dont divide by 0 by accident
+            if (_alertFrequency < 1)
+                _alertFrequency = 1;
+            if (++_counter % _alertFrequency == 0)
+            {
+                // display warning at the center of the screen, hacky way?
+                std::string str = "|cFFFFFC00[Playername:|cFF00FFFF[|cFF60FF00" + std::string(player->GetName().c_str()) + "|cFF00FFFF] Possible Ignore Zaxis Hack Detected!";
+                WorldPacket data(SMSG_NOTIFICATION, (str.size() + 1));
+                data << str;
+                sWorld->SendGlobalGMMessage(&data);
+                // need better way to limit chat spam
+                if (m_Players[key].GetTotalReports() >= sConfigMgr->GetOption<uint32>("Anticheat.ReportinChat.Min", 70) && m_Players[key].GetTotalReports() <= sConfigMgr->GetOption<uint32>("Anticheat.ReportinChat.Max", 80))
+                {
+                    uint32 latency = 0;
+                    latency = player->GetSession()->GetLatency();
+                    sWorld->SendGMText(LANG_ANTICHEAT_ALERT, player->GetName().c_str(), player->GetName().c_str(), latency);
+                }
+                _counter = 0;
+            }
+        }
+        if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
+        {
+            uint32 latency = 0;
+            latency = player->GetSession()->GetLatency();
+            LOG_INFO("anticheat.module", "AnticheatMgr:: Ignore Zaxis Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
+        }
+ 
+        BuildReport(player, ZAXIS_HACK_REPORT);
+    }
+ 
+}
+
+// basic detection
+void AnticheatMgr::AntiSwimHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode)
+{
+    if (!sConfigMgr->GetOption<bool>("Anticheat.AntiSwimHack", true))
+        return;
+
+    if (player->GetAreaId())
+    {
+        switch (player->GetAreaId())
+        {
+            case 2100: //Maraudon https://github.com/azerothcore/azerothcore-wotlk/issues/2437
+                return;
+        }
+    }
+
+    if (player->GetLiquidData().Status == (LIQUID_MAP_ABOVE_WATER | LIQUID_MAP_WATER_WALK | LIQUID_MAP_IN_WATER))
+    {
+        return;
+    }
+
+    if (opcode == MSG_MOVE_JUMP)
+        return;
+
+    if (movementInfo.HasMovementFlag(MOVEMENTFLAG_FALLING | MOVEMENTFLAG_SWIMMING))
+        return;
+
+    if (player->GetLiquidData().Status == LIQUID_MAP_UNDER_WATER && !movementInfo.HasMovementFlag(MOVEMENTFLAG_SWIMMING))
+    {
+        if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
+        {
+            uint32 latency = 0;
+            latency = player->GetSession()->GetLatency();
+            LOG_INFO("anticheat.module", "AnticheatMgr:: Anti-Swim-Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
+        }
+
+        BuildReport(player, ANTISWIM_HACK_REPORT);
+
+    }
+}
+
+// basic detection
+void AnticheatMgr::AntiKnockBackHactDetection(Player* player, MovementInfo movementInfo)
+{
+    if (!sConfigMgr->GetOption<bool>("Anticheat.AntiKnockBack", true))
+        return;
+
+    ObjectGuid key = player->GetGUID();
+
+    //if a knockback helper is not passed then we ignore
+    //if player has root state we ignore, knock back does not break root
+    if (!player->CanKnockback() || player->HasUnitState(UNIT_STATE_ROOT))
+        return;
+
+    if (movementInfo.pos == m_Players[key].GetLastMovementInfo().pos)
+    {
+        if (sConfigMgr->GetOption<bool>("Anticheat.WriteLog", true))
+        {
+            uint32 latency = 0;
+            latency = player->GetSession()->GetLatency();
+            LOG_INFO("anticheat.module", "AnticheatMgr:: Anti-Knock Back - Hack detected player {} ({}) - Latency: {} ms", player->GetName(), player->GetGUID().ToString(), latency);
+        }
+        BuildReport(player, ANTIKNOCK_BACK_HACK_REPORT);
+    }
+    else if (player->CanKnockback())
+        player->SetCanKnockback(false);
+}
+
 void AnticheatMgr::HandlePlayerLogin(Player* player)
 {
     // we must delete this to prevent errors in case of crash
@@ -714,15 +746,15 @@ void AnticheatMgr::HandlePlayerLogout(Player* player)
 void AnticheatMgr::SavePlayerData(Player* player)
 {
     AnticheatData playerData = m_Players[player->GetGUID()];
-    //                                                               1       2         3            4           5            6                 7                     8             9               10              11                   12           13              14               15
-    CharacterDatabase.Execute("REPLACE INTO players_reports_status (guid,average,total_reports,speed_reports,fly_reports,jump_reports,waterwalk_reports,teleportplane_reports,climb_reports,teleport_reports,ignorecontrol_reports,zaxis_reports,antiswim_reports,gravity_reports,creation_time) VALUES ({},{},{},{},{},{},{},{},{},{},{},{},{},{},{});", player->GetGUID().GetCounter(), playerData.GetAverage(), playerData.GetTotalReports(), playerData.GetTypeReports(SPEED_HACK_REPORT), playerData.GetTypeReports(FLY_HACK_REPORT), playerData.GetTypeReports(JUMP_HACK_REPORT), playerData.GetTypeReports(WALK_WATER_HACK_REPORT), playerData.GetTypeReports(TELEPORT_PLANE_HACK_REPORT), playerData.GetTypeReports(CLIMB_HACK_REPORT), playerData.GetTypeReports(TELEPORT_HACK_REPORT), playerData.GetTypeReports(IGNORE_CONTROL_REPORT), playerData.GetTypeReports(ZAXIS_HACK_REPORT), playerData.GetTypeReports(ANTISWIM_HACK_REPORT), playerData.GetTypeReports(GRAVITY_HACK_REPORT), playerData.GetCreationTime());
+    //                                                               1       2         3            4           5            6                 7                     8             9               10              11                   12           13              14               15                     16
+    CharacterDatabase.Execute("REPLACE INTO players_reports_status (guid,average,total_reports,speed_reports,fly_reports,jump_reports,waterwalk_reports,teleportplane_reports,climb_reports,teleport_reports,ignorecontrol_reports,zaxis_reports,antiswim_reports,gravity_reports,antiknockback_reports,creation_time) VALUES ({},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{});", player->GetGUID().GetCounter(), playerData.GetAverage(), playerData.GetTotalReports(), playerData.GetTypeReports(SPEED_HACK_REPORT), playerData.GetTypeReports(FLY_HACK_REPORT), playerData.GetTypeReports(JUMP_HACK_REPORT), playerData.GetTypeReports(WALK_WATER_HACK_REPORT), playerData.GetTypeReports(TELEPORT_PLANE_HACK_REPORT), playerData.GetTypeReports(CLIMB_HACK_REPORT), playerData.GetTypeReports(TELEPORT_HACK_REPORT), playerData.GetTypeReports(IGNORE_CONTROL_REPORT), playerData.GetTypeReports(ZAXIS_HACK_REPORT), playerData.GetTypeReports(ANTISWIM_HACK_REPORT), playerData.GetTypeReports(GRAVITY_HACK_REPORT), playerData.GetTypeReports(ANTIKNOCK_BACK_HACK_REPORT), playerData.GetCreationTime());
 }
 
 void AnticheatMgr::SavePlayerDataDaily(Player* player)
 {
     AnticheatData playerData = m_Players[player->GetGUID()];
-    //                                                              1     2          3             4           5            6                 7                     8             9             10                11                  12             13                14             15
-    CharacterDatabase.Execute("REPLACE INTO daily_players_reports (guid,average,total_reports,speed_reports,fly_reports,jump_reports,waterwalk_reports,teleportplane_reports,climb_reports,teleport_reports,ignorecontrol_reports,zaxis_reports,antiswim_reports,gravity_reports,creation_time) VALUES ({},{},{},{},{},{},{},{},{},{},{},{},{},{},{});", player->GetGUID().GetCounter(), playerData.GetAverage(), playerData.GetTotalReports(), playerData.GetTypeReports(SPEED_HACK_REPORT), playerData.GetTypeReports(FLY_HACK_REPORT), playerData.GetTypeReports(JUMP_HACK_REPORT), playerData.GetTypeReports(WALK_WATER_HACK_REPORT), playerData.GetTypeReports(TELEPORT_PLANE_HACK_REPORT), playerData.GetTypeReports(CLIMB_HACK_REPORT), playerData.GetTypeReports(TELEPORT_HACK_REPORT), playerData.GetTypeReports(IGNORE_CONTROL_REPORT), playerData.GetTypeReports(ZAXIS_HACK_REPORT), playerData.GetTypeReports(ANTISWIM_HACK_REPORT), playerData.GetTypeReports(GRAVITY_HACK_REPORT), playerData.GetCreationTime());
+    //                                                              1     2          3             4           5            6                 7                     8             9             10                11                  12             13                14             15                     16
+    CharacterDatabase.Execute("REPLACE INTO daily_players_reports (guid,average,total_reports,speed_reports,fly_reports,jump_reports,waterwalk_reports,teleportplane_reports,climb_reports,teleport_reports,ignorecontrol_reports,zaxis_reports,antiswim_reports,gravity_reports,antiknockback_reports,creation_time) VALUES ({},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{});", player->GetGUID().GetCounter(), playerData.GetAverage(), playerData.GetTotalReports(), playerData.GetTypeReports(SPEED_HACK_REPORT), playerData.GetTypeReports(FLY_HACK_REPORT), playerData.GetTypeReports(JUMP_HACK_REPORT), playerData.GetTypeReports(WALK_WATER_HACK_REPORT), playerData.GetTypeReports(TELEPORT_PLANE_HACK_REPORT), playerData.GetTypeReports(CLIMB_HACK_REPORT), playerData.GetTypeReports(TELEPORT_HACK_REPORT), playerData.GetTypeReports(IGNORE_CONTROL_REPORT), playerData.GetTypeReports(ZAXIS_HACK_REPORT), playerData.GetTypeReports(ANTISWIM_HACK_REPORT), playerData.GetTypeReports(GRAVITY_HACK_REPORT), playerData.GetTypeReports(ANTIKNOCK_BACK_HACK_REPORT), playerData.GetCreationTime());
 }
 uint32 AnticheatMgr::GetTotalReports(ObjectGuid guid)
 {
@@ -753,6 +785,9 @@ bool AnticheatMgr::MustCheckTempReports(uint8 type)
     if (type == GRAVITY_HACK_REPORT)
         return false;
 
+    if (type == ANTIKNOCK_BACK_HACK_REPORT)
+        return false;
+
     return true;
 }
 
@@ -769,6 +804,7 @@ bool AnticheatMgr::MustCheckTempReports(uint8 type)
 
 void AnticheatMgr::BuildReport(Player* player, uint16 reportType)
 {
+    OnReport(player, reportType);
     ObjectGuid key = player->GetGUID();
 
     if (MustCheckTempReports(reportType))
@@ -817,8 +853,8 @@ void AnticheatMgr::BuildReport(Player* player, uint16 reportType)
         if (!m_Players[key].GetDailyReportState())
         {
             AnticheatData playerData = m_Players[player->GetGUID()];
-            //                                                              1     2          3             4           5            6                 7                     8             9             10                11                  12             13                14             15
-            CharacterDatabase.Execute("REPLACE INTO daily_players_reports (guid,average,total_reports,speed_reports,fly_reports,jump_reports,waterwalk_reports,teleportplane_reports,climb_reports,teleport_reports,ignorecontrol_reports,zaxis_reports,antiswim_reports,gravity_reports,creation_time) VALUES ({},{},{},{},{},{},{},{},{},{},{},{},{},{},{});", player->GetGUID().GetCounter(), playerData.GetAverage(), playerData.GetTotalReports(), playerData.GetTypeReports(SPEED_HACK_REPORT), playerData.GetTypeReports(FLY_HACK_REPORT), playerData.GetTypeReports(JUMP_HACK_REPORT), playerData.GetTypeReports(WALK_WATER_HACK_REPORT), playerData.GetTypeReports(TELEPORT_PLANE_HACK_REPORT), playerData.GetTypeReports(CLIMB_HACK_REPORT), playerData.GetTypeReports(TELEPORT_HACK_REPORT), playerData.GetTypeReports(IGNORE_CONTROL_REPORT), playerData.GetTypeReports(ZAXIS_HACK_REPORT), playerData.GetTypeReports(ANTISWIM_HACK_REPORT), playerData.GetTypeReports(GRAVITY_HACK_REPORT), playerData.GetCreationTime());
+            //                                                              1     2          3             4           5            6                 7                     8             9             10                11                  12             13                14             15                    16
+            CharacterDatabase.Execute("REPLACE INTO daily_players_reports (guid,average,total_reports,speed_reports,fly_reports,jump_reports,waterwalk_reports,teleportplane_reports,climb_reports,teleport_reports,ignorecontrol_reports,zaxis_reports,antiswim_reports,gravity_reports,antiknockback_reports,creation_time) VALUES ({},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{});", player->GetGUID().GetCounter(), playerData.GetAverage(), playerData.GetTotalReports(), playerData.GetTypeReports(SPEED_HACK_REPORT), playerData.GetTypeReports(FLY_HACK_REPORT), playerData.GetTypeReports(JUMP_HACK_REPORT), playerData.GetTypeReports(WALK_WATER_HACK_REPORT), playerData.GetTypeReports(TELEPORT_PLANE_HACK_REPORT), playerData.GetTypeReports(CLIMB_HACK_REPORT), playerData.GetTypeReports(TELEPORT_HACK_REPORT), playerData.GetTypeReports(IGNORE_CONTROL_REPORT), playerData.GetTypeReports(ZAXIS_HACK_REPORT), playerData.GetTypeReports(ANTISWIM_HACK_REPORT), playerData.GetTypeReports(GRAVITY_HACK_REPORT), playerData.GetTypeReports(ANTIKNOCK_BACK_HACK_REPORT), playerData.GetCreationTime());
             m_Players[key].SetDailyReportState(true);
         }
     }

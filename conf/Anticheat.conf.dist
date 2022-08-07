@@ -82,6 +82,7 @@ Anticheat.IgnoreControlHack = 1
 Anticheat.DetectZaxisHack =1
 Anticheat.AntiSwimHack = 1
 Anticheat.DetectGravityHack = 1
+Anticheat.AntiKnockBack = 1
 
 #     Anticheat.StricterFlyHackCheck
 #       Description: 检查 moveflag 升序（可能给出误报）

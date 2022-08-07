@@ -31,6 +31,7 @@
 #include "AnticheatData.h"
 #include "Chat.h"
 #include "ObjectGuid.h"
+#include "EventEmitter.h"
 
 class Player;
 class AnticheatData;
@@ -47,7 +48,8 @@ enum ReportTypes
     IGNORE_CONTROL_REPORT = 7,
     ZAXIS_HACK_REPORT = 8,
     ANTISWIM_HACK_REPORT = 9,
-    GRAVITY_HACK_REPORT = 10
+    GRAVITY_HACK_REPORT = 10,
+    ANTIKNOCK_BACK_HACK_REPORT = 11
    // MAX_REPORT_TYPES
 };
 
@@ -60,11 +62,13 @@ class AnticheatMgr
     ~AnticheatMgr();
 
     public:
-    static AnticheatMgr* instance()
+        static AnticheatMgr* instance()
         {
            static AnticheatMgr* instance = new AnticheatMgr();
            return instance;
         }
+
+        EventEmitter<void(Player*, uint16)> OnReport;
 
         void StartHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode);
         void SavePlayerData(Player* player);
@@ -80,20 +84,21 @@ class AnticheatMgr
         void AnticheatDeleteCommand(ObjectGuid guid);
         void AnticheatPurgeCommand(ChatHandler* handler);
         void ResetDailyReportStates();
+
     private:
         void SpeedHackDetection(Player* player, MovementInfo movementInfo);
         void FlyHackDetection(Player* player, MovementInfo movementInfo);
-        void WalkOnWaterHackDetection(Player* player, MovementInfo movementInfo);
-        void JumpHackDetection(Player* player, MovementInfo movementInfo,uint32 opcode);
+        void JumpHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode);
         void TeleportPlaneHackDetection(Player* player, MovementInfo, uint32 opcode);
-        void ClimbHackDetection(Player* player,MovementInfo movementInfo, uint32 opcode);
-        void AntiSwimHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode);
+        void ClimbHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode);
         void TeleportHackDetection(Player* player, MovementInfo movementInfo);
         void IgnoreControlHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode);
-        void ZAxisHackDetection(Player* player, MovementInfo movementInfo);
         void GravityHackDetection(Player* player, MovementInfo movementInfo);
+        void WalkOnWaterHackDetection(Player* player, MovementInfo movementInfo);
+        void ZAxisHackDetection(Player* player, MovementInfo movementInfo);
+        void AntiSwimHackDetection(Player* player, MovementInfo movementInfo, uint32 opcode);
+        void AntiKnockBackHactDetection(Player* player, MovementInfo movementInfo);
         void BuildReport(Player* player,uint16 reportType);
-
         bool MustCheckTempReports(uint8 type);
         uint32 _counter = 0;
         uint32 _alertFrequency = 0;
