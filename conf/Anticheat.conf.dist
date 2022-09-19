@@ -95,7 +95,7 @@ Anticheat.OpAckOrderHack = 1
 Anticheat.StricterFlyHackCheck = 0
 
 #     Anticheat.StricterDetectJumpHack
-#       Description: Checks Stricter moveflag jumping (may give false positives)
+#       Description: 检查更严格的移动标志跳跃（可能会出现误报）
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 
