@@ -102,11 +102,11 @@ Anticheat.StricterFlyHackCheck = 0
 Anticheat.StricterDetectJumpHack = 0
 
 #     Anticheat.SpeedLimitTolerance
-#       Description: Speed Limit Tolerance allows a certain whole percentage of tolerance to speed 
-#       hack logging and detection.
+#       Description: Speed Limit Tolerance 允许一定比例的容差来加速
+#       黑客记录和检测。
 #
-#       Example: AnticheatMgr:: Speed-Hack (Speed Movement at 12% above allowed Server Set rate 8%.)
-#       will be detected since if it is set to 4 (suggested) and higher, but anything 3 and lower will not be flagged.
+#       Example: AnticheatMgr:: Speed-Hack (速度移动 12%，高于允许的服务器设置率 8%。)
+#       将被检测到，因为如果它设置为 4（建议）和更高，但任何 3 和更低的都不会被标记。
 #       Default:    0 - (Default)
 #
 
@@ -120,7 +120,7 @@ Anticheat.SpeedLimitTolerance = 0
 #       Description: 报告达到阈值时启用并自动启动
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
-#       Default:    70 - (Kick at 70 auto reports)
+#       Default:    70 - (启动 70 份自动报告)
 #
 
 Anticheat.KickPlayer = 0
@@ -132,7 +132,7 @@ Anticheat.ReportsForKick = 70
 #       Description: 当报告达到阈值时启用并自动禁止
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
-#       Default:    70 - (Kick at 70 auto reports)
+#       Default:    70 - (启动 70 份自动报告)
 #
 
 Anticheat.BanPlayer = 0
@@ -144,7 +144,7 @@ Anticheat.ReportsForBan = 70
 #       Description: 当报告达到阈值时启用和自动越狱
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
-#       Default:    70 - (Kick at 70 auto reports)
+#       Default:    70 - (启动 70 份自动报告)
 #
 
 Anticheat.JailPlayer = 0
