@@ -101,6 +101,17 @@ Anticheat.StricterFlyHackCheck = 0
 
 Anticheat.StricterDetectJumpHack = 0
 
+#     Anticheat.SpeedLimitTolerance
+#       Description: Speed Limit Tolerance allows a certain whole percentage of tolerance to speed 
+#       hack logging and detection.
+#
+#       Example: AnticheatMgr:: Speed-Hack (Speed Movement at 12% above allowed Server Set rate 8%.)
+#       will be detected since if it is set to 4 (suggested) and higher, but anything 3 and lower will not be flagged.
+#       Default:    0 - (Default)
+#
+
+Anticheat.SpeedLimitTolerance = 0
+
 #     Automatic Moderation Features
 #
 #     Anticheat.KickPlayer
