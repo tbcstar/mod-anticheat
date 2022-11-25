@@ -319,6 +319,10 @@ void AnticheatMgr::JumpHackDetection(Player* player, MovementInfo movementInfo, 
         if (!sConfigMgr->GetOption<bool>("Anticheat.StricterDetectJumpHack", true))
             return;
 
+        //Celestial Planetarium Observer Battle has a narrow path that false flags
+        if (player && GetWMOAreaTableEntryByTripple(5202, 0, 24083))
+            return;
+
         if (m_Players[key].GetLastOpcode() == MSG_MOVE_JUMP && !player->IsFalling())
             return;
 
@@ -954,7 +958,7 @@ void AnticheatMgr::BGStartExploit(Player* player, MovementInfo movementInfo)
                     {
                         sAnticheatMgr->BGreport(player);
                     }
-                    if ((player->GetTeamId() == TEAM_HORDE && movementInfo.pos.GetPositionY() > -536.0f) ||
+                    if ((player->GetTeamId() == TEAM_HORDE && movementInfo.pos.GetPositionY() > -535.0f) ||
                         (player->GetTeamId() == TEAM_HORDE && movementInfo.pos.GetPositionX() > -1283.33f) ||
                         (player->GetTeamId() == TEAM_HORDE && movementInfo.pos.GetPositionY() < -716.0f))
                     {
