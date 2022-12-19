@@ -58,7 +58,7 @@ Anticheat.LoginMessage = 0
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 
-Anticheat.WriteLog = 0
+Anticheat.WriteLog = 1
 
 #     Anticheat.SaveReportsTime
 #       描述:设置每个报告保存之间的时间，单位为秒
@@ -165,10 +165,10 @@ Anticheat.AnnounceJail = 0
 #
 #     Anticheat.BG.StartAreaTeleport
 #
-#       Description: Sends player back to start position if player cheats and teleports out of start spot
-#                    before the BG begins.
+#       Description: 如果玩家作弊并在战场开始前传送出起始点，
+#                    则将玩家送回起始位置。
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 #
 
-Anticheat.BG.StartAreaTeleport = 0
+Anticheat.BG.StartAreaTeleport = 1
