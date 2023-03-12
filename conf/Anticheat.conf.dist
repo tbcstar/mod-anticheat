@@ -110,9 +110,9 @@ Anticheat.StricterDetectJumpHack = 0
 #       Default:    0 - (Default)
 #
 
-Anticheat.SpeedLimitTolerance = 0
+Anticheat.SpeedLimitTolerance = 4
 
-#     Automatic Moderation Features
+#     自动审核功能
 #
 #     Anticheat.KickPlayer
 #     Anticheat.ReportsForKick
@@ -123,7 +123,7 @@ Anticheat.SpeedLimitTolerance = 0
 #       Default:    70 - (启动 70 份自动报告)
 #
 
-Anticheat.KickPlayer = 0
+Anticheat.KickPlayer = 1
 Anticheat.ReportsForKick = 70
 
 #     Anticheat.BanPlayer
@@ -135,7 +135,7 @@ Anticheat.ReportsForKick = 70
 #       Default:    70 - (启动 70 份自动报告)
 #
 
-Anticheat.BanPlayer = 0
+Anticheat.BanPlayer = 1
 Anticheat.ReportsForBan = 70
 
 #     Anticheat.JailPlayer
@@ -147,7 +147,7 @@ Anticheat.ReportsForBan = 70
 #       Default:    70 - (启动 70 份自动报告)
 #
 
-Anticheat.JailPlayer = 0
+Anticheat.JailPlayer = 1
 Anticheat.ReportsForJail = 70
 
 #     Anticheat.AnnounceKick
@@ -157,9 +157,9 @@ Anticheat.ReportsForJail = 70
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 
-Anticheat.AnnounceKick = 0
-Anticheat.AnnounceBan = 0
-Anticheat.AnnounceJail = 0
+Anticheat.AnnounceKick = 1
+Anticheat.AnnounceBan = 1
+Anticheat.AnnounceJail = 1
 
 #
 ###################################################################################################
@@ -167,11 +167,11 @@ Anticheat.AnnounceJail = 0
 ###################################################################################################
 #   ANTICHEAT COUNTER MEASURE
 #
-#     Anticheat Counter Measures
+#     反作弊措施
 #
 #     Anticheat.CM.TIMEMANIPULATION
 #
-#       Description: Counters Time Manipulation hacks. These hacks can cause server to crash.
+#       Description: 计数器黑客攻击，这些攻击会导致服务器崩溃。
 #
 #       Default:    1 - (Enabled)
 #                   0 - (Disabled)
@@ -182,43 +182,43 @@ Anticheat.CM.TIMEMANIPULATION = 1
 #
 #     Anticheat.CM.Teleport
 #
-#       Description: Sends player back to last gps position if player cheats and teleports.
+#       Description: 如果玩家作弊和传送，将玩家送回最后的 gps 位置。
 #
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 #
 
-Anticheat.CM.Teleport = 0
+Anticheat.CM.Teleport = 1
 
 #
 #     Anticheat.CM.WriteLog
 #
-#       Description: Enables Logging
+#       Description: 启用日志记录
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 #
 
-Anticheat.CM.WriteLog = 0
+Anticheat.CM.WriteLog = 1
 
 #
 #     Anticheat.CM.ALERTSCREEN
 #
-#       Description: Alerts online GMs of Counter Measure being deployed via screen alert
+#       Description: 通过屏幕警报提醒在线GM正在部署的应对措施
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 #
 
-Anticheat.CM.ALERTSCREEN = 0
+Anticheat.CM.ALERTSCREEN = 1
 
 #
 #     Anticheat.CM.ALERTCHAT
 #
-#       Description: Alerts online GMs of Counter Measure being deployed via chat alert
+#       Description: 通过聊天提醒在线GM正在部署的应对措施
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 #
 
-Anticheat.CM.ALERTCHAT= 0
+Anticheat.CM.ALERTCHAT= 1
 
 #
 #     Anticheat.BG.StartAreaTeleport
