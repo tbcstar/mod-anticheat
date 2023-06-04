@@ -193,7 +193,7 @@ Anticheat.CM.Teleport = 1
 #
 #     Anticheat.CM.FLYHACK
 #
-#       Description: Sets player back to the ground if fly hack is detected
+#       Description: 如果检测到飞行作弊，则将玩家置于地面上
 #
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
@@ -204,7 +204,7 @@ Anticheat.CM.FLYHACK = 0
 #
 #     Anticheat.CM.JUMPHACK
 #     Anticheat.CM.ADVJUMPHACK
-#       Description: Sets player back to the ground if jump hack is detected
+#       Description: 如果检测到跳跃作弊，则将玩家置于地面上
 #
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
@@ -216,7 +216,7 @@ Anticheat.CM.ADVJUMPHACK = 0
 #
 #     Anticheat.CM.IGNOREZ
 #
-#       Description: Sets player back to the ground if ignore-z hack is detected
+#       Description: 如果检测到穿墙作弊，则将玩家置于地面上
 #
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
@@ -227,7 +227,7 @@ Anticheat.CM.IGNOREZ = 0
 #
 #     Anticheat.CM.SPEEDHACK
 #
-#       Description: Sets player back to allowed server rate speed when speed hack is detected
+#       Description: 如果检测到速度作弊，则将玩家置于允许的服务器速度上
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
 #
@@ -237,7 +237,7 @@ Anticheat.CM.SPEEDHACK = 0
 #
 #     Anticheat.BG.StartAreaTeleport
 #
-#       Description: Sends player back to start position if player cheats and teleports out of start spot
+#       Description: 如果玩家在战场开始之前作弊并传送出起始位置，则将玩家送回起始位置。
 #                    before the BG begins.
 #       Default:    0 - (Disabled)
 #                   1 - (Enabled)
